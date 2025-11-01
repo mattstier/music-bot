@@ -6,6 +6,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const GUILD_ID = ""
+
 var PlayCommand = &discordgo.ApplicationCommand{
 	Name:        "play",
 	Description: "Finds and plays a song by name or queues it",
@@ -19,7 +21,12 @@ var playOptions = []*discordgo.ApplicationCommandOption{
 		Description: "Input the name of the song here",
 		Required:    true,
 	},
-	//TODO: add looping as an optional, now it was buggy for some reason
+	{
+		Type:        discordgo.ApplicationCommandOptionNumber,
+		Name:        "loop",
+		Description: "The song will be repeated this many times",
+		Required:    false,
+	},
 }
 
 var SkipCommand = &discordgo.ApplicationCommand{
@@ -32,27 +39,14 @@ var PauseCommand = &discordgo.ApplicationCommand{
 	Description: "Toggle pause/resume current song playing",
 }
 
-var LoopCommand = &discordgo.ApplicationCommand{
-	Name:        "loop",
-	Description: "Loop current song certain amount of times",
-	Options: []*discordgo.ApplicationCommandOption{
-		{
-			Type:     discordgo.ApplicationCommandOptionNumber,
-			Name:     "loopCount",
-			Required: true,
-		},
-	},
-}
-
 func RegisterCommands(session *discordgo.Session) {
 	commands := []*discordgo.ApplicationCommand{
 		PlayCommand,
 		PauseCommand,
 		SkipCommand,
-		LoopCommand,
 	}
 	for _, command := range commands {
-		_, err := session.ApplicationCommandCreate(session.State.User.ID, "", command)
+		_, err := session.ApplicationCommandCreate(session.State.User.ID, GUILD_ID, command)
 		if err != nil {
 			fmt.Println("Could not initialize command", command.Name)
 		}

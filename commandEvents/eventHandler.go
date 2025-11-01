@@ -4,6 +4,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const PURPLE = 0xA21DB9
+const RED = 0xE02700
+const GREEN = 0x0FE000
+
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	event := i.ApplicationCommandData().Name
 	switch event {
@@ -13,8 +17,6 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		handleSkipEvent(s, i)
 	case "pause":
 		handlePauseEvent(s, i)
-	case "loop":
-		handleLoopEvent(s, i)
 	}
 }
 
@@ -24,15 +26,36 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       "Playing Song",
+				Title:       "Playing Song:",
 				Description: "\"" + query + "\"",
 				//purple color
-				Color: 0xA21DB9,
+				Color: PURPLE,
 			},
 		}},
 	})
 }
 
-func handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate)  {}
-func handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {}
-func handleLoopEvent(s *discordgo.Session, i *discordgo.InteractionCreate)  {}
+func handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+			{
+				Title:       "Song Skipped",
+				Description: "Next song: ...",
+				Color:       RED,
+			},
+		}},
+	})
+}
+
+func handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+			{
+				Title: "Song Paused",
+				Color: GREEN,
+			},
+		}},
+	})
+}
