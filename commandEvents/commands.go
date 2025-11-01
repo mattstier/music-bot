@@ -1,6 +1,8 @@
-package main
+package commandEvents
 
 import (
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -28,4 +30,31 @@ var SkipCommand = &discordgo.ApplicationCommand{
 var PauseCommand = &discordgo.ApplicationCommand{
 	Name:        "pause",
 	Description: "Toggle pause/resume current song playing",
+}
+
+var LoopCommand = &discordgo.ApplicationCommand{
+	Name:        "loop",
+	Description: "Loop current song certain amount of times",
+	Options: []*discordgo.ApplicationCommandOption{
+		{
+			Type:     discordgo.ApplicationCommandOptionNumber,
+			Name:     "loopCount",
+			Required: true,
+		},
+	},
+}
+
+func RegisterCommands(session *discordgo.Session) {
+	commands := []*discordgo.ApplicationCommand{
+		PlayCommand,
+		PauseCommand,
+		SkipCommand,
+		LoopCommand,
+	}
+	for _, command := range commands {
+		_, err := session.ApplicationCommandCreate(session.State.User.ID, "", command)
+		if err != nil {
+			fmt.Println("Could not initialize command", command.Name)
+		}
+	}
 }
