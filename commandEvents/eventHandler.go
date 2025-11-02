@@ -1,12 +1,16 @@
 package commandEvents
 
 import (
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
+
+const CHANNEL_ID = "771489027740139536"
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	event := i.ApplicationCommandData().Name
@@ -20,7 +24,26 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
+func findChannel(s *discordgo.Session, i *discordgo.InteractionCreate) (string, error) {
+	guildID := i.GuildID
+	userID := i.Member.User.ID //userID within guild
+	voiceState, err := s.State.VoiceState(guildID, userID)
+	if err != nil {
+		return "", err
+	}
+	return voiceState.ChannelID, nil
+}
+
 func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+	userChannelID, err := findChannel(s, i)
+	if err != nil {
+		fmt.Println(err, " | Error finding channel")
+		return
+	}
+	//joins voice channel that the initiating user is currently on
+	go s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
+
 	query := i.ApplicationCommandData().Options[0].StringValue()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
