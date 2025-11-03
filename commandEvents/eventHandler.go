@@ -43,7 +43,6 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	//joins voice channel that the initiating user is currently on
 	go s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
-
 	query := i.ApplicationCommandData().Options[0].StringValue()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
