@@ -2,6 +2,8 @@ package commandEvents
 
 import (
 	"fmt"
+	"log"
+	"music-bot/audio"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -38,11 +40,18 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	userChannelID, err := findChannel(s, i)
 	if err != nil {
-		fmt.Println(err, " | Error finding channel")
+		fmt.Println(userChannelID, " | Error finding channel")
 		return
 	}
 	//joins voice channel that the initiating user is currently on
-	go s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
+	channelJoin := make(chan *discordgo.VoiceConnection)
+	go func() {
+		vc, _ := s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
+		channelJoin <- vc
+	}()
+	vc := <-channelJoin
+	player := audio.FilePlayer{}
+	player.SetSession(s)
 	query := i.ApplicationCommandData().Options[0].StringValue()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -55,6 +64,11 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			},
 		}},
 	})
+	statusErr := s.UpdateStreamingStatus(0, "music.mp3", "")
+	if statusErr != nil {
+		log.Fatal(statusErr)
+	}
+	player.Play(vc)
 }
 
 func handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {

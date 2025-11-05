@@ -25,6 +25,7 @@ func main() {
 	}
 	session.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
 	//listens to slash commands and decides which one to execute
+
 	session.AddHandler(commandEvents.EventListener)
 
 	err = session.Open()
