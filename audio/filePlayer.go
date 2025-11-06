@@ -1,13 +1,14 @@
 package audio
 
 import (
-	"io"
+	"encoding/binary"
 	"log"
 	"os"
 	"os/exec"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"gopkg.in/hraban/opus.v2"
 )
 
 var filePlayerInstance *FilePlayer
@@ -29,6 +30,12 @@ func (player *FilePlayer) SetSession(session *discordgo.Session) {
 	player.session = session
 }
 func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
+	const sampleRate = 48000
+	const channels = 1 // mono; 2 for stereo
+
+	//opus encoder
+	enc, _ := opus.NewEncoder(sampleRate, channels, opus.AppVoIP)
+
 	err := vc.Speaking(true)
 	if err != nil {
 		log.Fatal(err)
@@ -46,17 +53,27 @@ func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 
 	defer cmd.Wait()
 
-	buf := make([]byte, 960*2*2) // 20ms of stereo 16-bit PCM (960 samples * 2 channels * 2 bytes)
+	buf := make([]byte, 960*2) // 20ms of stereo 16-bit PCM (960 samples * 1 channel * 2 bytes)
+	data := make([]byte, 960*2)
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
-		n, err := io.ReadFull(stdout, buf)
+		n, err := stdout.Read(buf)
+		e, err := enc.Encode(bytesToInt16(buf[:n]), data)
 		if err != nil {
 			break
 		}
 		<-ticker.C
-		vc.OpusSend <- buf[:n]
+		vc.OpusSend <- data[:e]
 	}
 	defer vc.Speaking(false)
+}
+
+func bytesToInt16(buf []byte) []int16 {
+	samples := make([]int16, len(buf)/2)
+	for i := range samples {
+		samples[i] = int16(binary.LittleEndian.Uint16(buf[i*2:]))
+	}
+	return samples
 }
