@@ -43,7 +43,7 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println(userChannelID, " | Error finding channel")
 		return
 	}
-	go s.ChannelVoiceJoin(i.GuildID, CHANNEL_ID, false, false)
+	go s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
 
 	query := i.ApplicationCommandData().Options[0].StringValue()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

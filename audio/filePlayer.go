@@ -31,7 +31,7 @@ func (player *FilePlayer) SetSession(session *discordgo.Session) {
 }
 func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 	const sampleRate = 48000
-	const channels = 1 // mono; 2 for stereo
+	const channels = 2 // mono; 2 for stereo
 
 	//opus encoder
 	enc, _ := opus.NewEncoder(sampleRate, channels, opus.AppVoIP)
@@ -53,8 +53,8 @@ func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 
 	defer cmd.Wait()
 
-	buf := make([]byte, 960*2) // 20ms of stereo 16-bit PCM (960 samples * 1 channel * 2 bytes)
-	data := make([]byte, 960*2)
+	buf := make([]byte, 960*2*2) // 20ms of stereo 16-bit PCM (960 samples * 2 channel * 2 bytes)
+	data := make([]byte, 960*2*2)
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 
