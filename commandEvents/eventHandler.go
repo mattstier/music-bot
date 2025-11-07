@@ -2,8 +2,8 @@ package commandEvents
 
 import (
 	"fmt"
-	"log"
 	"music-bot/audio"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -43,15 +43,8 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println(userChannelID, " | Error finding channel")
 		return
 	}
-	//joins voice channel that the initiating user is currently on
-	channelJoin := make(chan *discordgo.VoiceConnection)
-	go func() {
-		vc, _ := s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
-		channelJoin <- vc
-	}()
-	vc := <-channelJoin
-	player := audio.FilePlayer{}
-	player.SetSession(s)
+	go s.ChannelVoiceJoin(i.GuildID, CHANNEL_ID, false, false)
+
 	query := i.ApplicationCommandData().Options[0].StringValue()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -64,9 +57,13 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			},
 		}},
 	})
-	statusErr := s.UpdateStreamingStatus(0, "music.mp3", "")
-	if statusErr != nil {
-		log.Fatal(statusErr)
+	player := audio.FilePlayer{}
+	player.SetSession(s)
+	//manually retrieve the current voice connection, because otherwise it fails
+	vc := s.VoiceConnections[i.GuildID]
+	//wait for the voice connection
+	for !vc.Ready {
+		time.Sleep(10 * time.Millisecond)
 	}
 	player.Play(vc)
 }

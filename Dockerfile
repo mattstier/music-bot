@@ -1,7 +1,11 @@
 FROM golang:1.25
 
 # Install native dependencies required by hraban/opus.v2
-RUN apt-get update && apt-get -y install libopus-dev libopusfile-dev pkg-config \
+RUN apt-get update && apt-get -y install  \
+    libopus-dev  \
+    libopusfile-dev  \
+    pkg-config \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
