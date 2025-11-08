@@ -1,6 +1,7 @@
 package commandEvents
 
 import (
+	"context"
 	"fmt"
 	"music-bot/audio"
 	"time"
@@ -43,7 +44,17 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println(userChannelID, " | Error finding channel")
 		return
 	}
-	go s.ChannelVoiceJoin(i.GuildID, userChannelID, false, false)
+
+	//joining with context, deprecated in the new version
+	//but the fork for the fix of the audio channel issue is in v26 not v29
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	voice := make(chan *discordgo.VoiceConnection)
+
+	go func() {
+		vc, _ := s.ChannelVoiceJoin(ctx, i.GuildID, userChannelID, false, false)
+		voice <- vc
+	}()
 
 	query := i.ApplicationCommandData().Options[0].StringValue()
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -59,11 +70,13 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	})
 	player := audio.FilePlayer{}
 	player.SetSession(s)
-	//manually retrieve the current voice connection, because otherwise it fails
-	vc := s.VoiceConnections[i.GuildID]
-	//wait for the voice connection
-	for !vc.Ready {
+
+	//waiting for voice connection
+	vc := <-voice
+	//waiting for voice connection to be ready
+	for vc.Cond == nil {
 		time.Sleep(10 * time.Millisecond)
+		fmt.Println("Waiting for websocket to open")
 	}
 	player.Play(vc)
 }
