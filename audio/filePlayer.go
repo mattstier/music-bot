@@ -42,6 +42,7 @@ func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 	}
 	cmd := exec.Command("ffmpeg",
 		"-i", "./audio/music.mp3",
+		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
 		"-ar", "48000",
 		"-ac", "2",
 		"-f", "s16le",
@@ -53,23 +54,64 @@ func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 
 	defer cmd.Wait()
 
-	buf := make([]byte, 960*2*2) // 20ms of stereo 16-bit PCM (960 samples * 2 channel * 2 bytes)
-	data := make([]byte, 960*2*2)
-	ticker := time.NewTicker(20 * time.Millisecond)
-	defer ticker.Stop()
+	const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
 
-	for {
-		n, err := stdout.Read(buf)
-		e, err := enc.Encode(bytesToInt16(buf[:n]), data)
-		if err != nil {
-			break
+	// buffered channels
+	pcmChannel := make(chan []byte, 50)
+	opusChannel := make(chan []byte, 50)
+
+	//buffers
+	buf := make([]byte, frameSize)
+	data := make([]byte, frameSize)
+
+	//piping pcm
+	go func() {
+		var pcmBuf []byte
+		for {
+			n, err := stdout.Read(buf)
+			if n > 0 {
+				pcmBuf = append(pcmBuf, buf[:n]...)
+				for len(pcmBuf) >= frameSize {
+					frame := make([]byte, frameSize)
+					copy(frame, pcmBuf[:frameSize])
+					pcmChannel <- frame
+					pcmBuf = pcmBuf[frameSize:]
+				}
+			}
+			if err != nil {
+				break
+			}
 		}
-		<-ticker.C
-		vc.OpusSend <- data[:e]
-	}
-	defer vc.Speaking(false)
-}
+		close(pcmChannel)
+	}()
 
+	//encoding
+	go func() {
+		for frame := range pcmChannel {
+			samples := bytesToInt16(frame)
+			e, err := enc.Encode(samples, data)
+			if err != nil {
+				break
+			}
+			pkt := make([]byte, e)
+			copy(pkt, data[:e])
+			opusChannel <- pkt
+		}
+		close(opusChannel)
+	}()
+
+	time.Sleep(200 * time.Millisecond) // 200 ms latency cushion
+
+	//sending
+	go func() {
+		ticker := time.NewTicker(20 * time.Millisecond)
+		defer ticker.Stop()
+		for pkt := range opusChannel {
+			<-ticker.C
+			vc.OpusSend <- pkt
+		}
+	}()
+}
 func bytesToInt16(buf []byte) []int16 {
 	samples := make([]int16, len(buf)/2)
 	for i := range samples {
