@@ -23,9 +23,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//listens to slash commands and decides which one to execute
-	session.AddHandler(commandEvents.EventListener)
 	session.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
+	//listens to slash commands and decides which one to execute
+
+	session.AddHandler(commandEvents.EventListener)
 
 	err = session.Open()
 	defer session.Close()
