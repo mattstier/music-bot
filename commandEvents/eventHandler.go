@@ -77,7 +77,7 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println("Waiting for websocket to open")
 	}
 	if !player.IsPlaying() {
-		player.Play(vc)
+		player.Start(vc)
 	} else {
 		//queue result
 	}

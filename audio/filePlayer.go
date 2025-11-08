@@ -16,11 +16,13 @@ import (
 const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
 const sampleRate = 48000
 const channels = 2 // mono; 2 for stereo
+const audioPath = "./audio/files"
 
 type FilePlayer struct {
-	filePath  string
-	isPlaying bool
-	session   *discordgo.Session
+	isPlaying   bool
+	songs       []string
+	currentSong int
+	session     *discordgo.Session
 }
 
 func (player *FilePlayer) SetSession(session *discordgo.Session) {
@@ -30,7 +32,21 @@ func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
-func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
+func (player *FilePlayer) Start(vc *discordgo.VoiceConnection) {
+	player.songs = loadFileNames(audioPath)
+	for i := player.currentSong; i < len(player.songs); i++ {
+		current := player.songs[i]
+		fmt.Println("Current: ", current)
+		fmt.Println("Position: ", i)
+		fmt.Println(player.songs)
+		player.Play(current, vc)
+
+		time.Sleep(time.Second)
+		player.currentSong++
+	}
+}
+
+func (player *FilePlayer) Play(song string, vc *discordgo.VoiceConnection) {
 
 	player.isPlaying = true
 
@@ -38,9 +54,8 @@ func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	cmd := exec.Command("ffmpeg",
-		"-i", "./audio/music.mp3",
+		"-i", audioPath+"/"+song,
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
 		"-ar", "48000",
 		"-ac", "2",
@@ -128,4 +143,13 @@ func bytesToInt16(buf []byte) []int16 {
 		samples[i] = int16(binary.LittleEndian.Uint16(buf[i*2:]))
 	}
 	return samples
+}
+
+func loadFileNames(path string) []string {
+	files, _ := os.ReadDir(path)
+	fileNames := make([]string, len(files))
+	for num, file := range files {
+		fileNames[num] = file.Name()
+	}
+	return fileNames
 }
