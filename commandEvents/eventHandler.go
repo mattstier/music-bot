@@ -13,8 +13,6 @@ const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
 
-const CHANNEL_ID = "771489027740139536"
-
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	event := i.ApplicationCommandData().Name
 	switch event {
@@ -78,7 +76,11 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		time.Sleep(10 * time.Millisecond)
 		fmt.Println("Waiting for websocket to open")
 	}
-	player.Play(vc)
+	if !player.IsPlaying() {
+		player.Play(vc)
+	} else {
+		//queue result
+	}
 }
 
 func handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {

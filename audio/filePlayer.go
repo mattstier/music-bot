@@ -2,6 +2,8 @@ package audio
 
 import (
 	"encoding/binary"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -11,35 +13,32 @@ import (
 	"gopkg.in/hraban/opus.v2"
 )
 
-var filePlayerInstance *FilePlayer
+const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
+const sampleRate = 48000
+const channels = 2 // mono; 2 for stereo
 
 type FilePlayer struct {
-	filePath string
-	session  *discordgo.Session
-}
-
-// single thread singleton pattern for avoiding bugs on the same thread
-func GetFilePlayer() *FilePlayer {
-	if filePlayerInstance == nil {
-		filePlayerInstance = &FilePlayer{}
-	}
-	return filePlayerInstance
+	filePath  string
+	isPlaying bool
+	session   *discordgo.Session
 }
 
 func (player *FilePlayer) SetSession(session *discordgo.Session) {
 	player.session = session
 }
-func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
-	const sampleRate = 48000
-	const channels = 2 // mono; 2 for stereo
+func (player *FilePlayer) IsPlaying() bool {
+	return player.isPlaying
+}
 
-	//opus encoder
-	enc, _ := opus.NewEncoder(sampleRate, channels, opus.AppVoIP)
+func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
+
+	player.isPlaying = true
 
 	err := vc.Speaking(true)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	cmd := exec.Command("ffmpeg",
 		"-i", "./audio/music.mp3",
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
@@ -48,70 +47,81 @@ func (player *FilePlayer) Play(vc *discordgo.VoiceConnection) {
 		"-f", "s16le",
 		"pipe:1",
 	)
+	//creating pipe with a ffmpeg command
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Stderr = os.Stderr
 	cmd.Start()
-
 	defer cmd.Wait()
-
-	const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
 
 	// buffered channels
 	pcmChannel := make(chan []byte, 50)
 	opusChannel := make(chan []byte, 50)
+	done := make(chan bool)
 
-	//buffers
-	buf := make([]byte, frameSize)
-	data := make([]byte, frameSize)
+	//sending/streaming pcm into the pcm channel
+	go pipePCM(stdout, pcmChannel)
 
-	//piping pcm
-	go func() {
-		var pcmBuf []byte
-		for {
-			n, err := stdout.Read(buf)
-			if n > 0 {
-				pcmBuf = append(pcmBuf, buf[:n]...)
-				for len(pcmBuf) >= frameSize {
-					frame := make([]byte, frameSize)
-					copy(frame, pcmBuf[:frameSize])
-					pcmChannel <- frame
-					pcmBuf = pcmBuf[frameSize:]
-				}
-			}
-			if err != nil {
-				break
-			}
-		}
-		close(pcmChannel)
-	}()
+	//encoding and sending pcms into opus frames to the opus channel
+	go encodePCM(pcmChannel, opusChannel)
 
-	//encoding
-	go func() {
-		for frame := range pcmChannel {
-			samples := bytesToInt16(frame)
-			e, err := enc.Encode(samples, data)
-			if err != nil {
-				break
-			}
-			pkt := make([]byte, e)
-			copy(pkt, data[:e])
-			opusChannel <- pkt
-		}
-		close(opusChannel)
-	}()
+	// 200 ms latency cushion
+	time.Sleep(200 * time.Millisecond)
 
-	time.Sleep(200 * time.Millisecond) // 200 ms latency cushion
+	//sending opus frames to the VoiceConnection
+	go sendOpus(opusChannel, done, vc)
 
-	//sending
-	go func() {
-		ticker := time.NewTicker(20 * time.Millisecond)
-		defer ticker.Stop()
-		for pkt := range opusChannel {
-			<-ticker.C
-			vc.OpusSend <- pkt
-		}
-	}()
+	<-done
+	player.isPlaying = false
+	fmt.Println("Music ended")
 }
+
+func pipePCM(stdout io.ReadCloser, pcmChannel chan []byte) {
+	buf := make([]byte, frameSize)
+	var pcmBuf []byte
+	for {
+		n, err := stdout.Read(buf)
+		if n > 0 {
+			pcmBuf = append(pcmBuf, buf[:n]...)
+			for len(pcmBuf) >= frameSize {
+				frame := make([]byte, frameSize)
+				copy(frame, pcmBuf[:frameSize])
+				pcmChannel <- frame
+				pcmBuf = pcmBuf[frameSize:]
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	close(pcmChannel)
+}
+
+func encodePCM(pcmChannel chan []byte, opusChannel chan []byte) {
+	enc, _ := opus.NewEncoder(sampleRate, channels, opus.AppVoIP)
+	data := make([]byte, frameSize)
+	for frame := range pcmChannel {
+		samples := bytesToInt16(frame)
+		e, err := enc.Encode(samples, data)
+		if err != nil {
+			break
+		}
+		pkt := make([]byte, e)
+		copy(pkt, data[:e])
+		opusChannel <- pkt
+	}
+	close(opusChannel)
+}
+
+func sendOpus(opusChannel chan []byte, done chan bool, vc *discordgo.VoiceConnection) {
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for pkt := range opusChannel {
+		<-ticker.C
+		vc.OpusSend <- pkt
+	}
+	done <- true
+}
+
 func bytesToInt16(buf []byte) []int16 {
 	samples := make([]int16, len(buf)/2)
 	for i := range samples {
