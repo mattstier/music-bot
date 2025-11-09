@@ -22,32 +22,74 @@ type FilePlayer struct {
 	isPlaying   bool
 	songs       []string
 	currentSong int
+	done        chan bool
 	session     *discordgo.Session
+	connection  *discordgo.VoiceConnection
+}
+
+func (player *FilePlayer) Stop() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (player *FilePlayer) Resume() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (player *FilePlayer) CurrentSong() string {
+
+	if player.songs != nil && len(player.songs) > 0 {
+		return player.songs[player.currentSong]
+	}
+	return "Couldn't find next song"
 }
 
 func (player *FilePlayer) SetSession(session *discordgo.Session) {
 	player.session = session
 }
+
+func (player *FilePlayer) SetConnection(connection *discordgo.VoiceConnection) {
+	player.connection = connection
+}
+
 func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
-func (player *FilePlayer) Start(vc *discordgo.VoiceConnection) {
+func (player *FilePlayer) Start() {
+
+	done := make(chan bool)
+
+	player.done = done
 	player.songs = loadFileNames(audioPath)
+	player.currentSong = 0
+
 	for i := player.currentSong; i < len(player.songs); i++ {
 		current := player.songs[i]
 		fmt.Println("Current: ", current)
 		fmt.Println("Position: ", i)
 		fmt.Println(player.songs)
-		player.Play(current, vc)
+		player.Play(current)
 
 		time.Sleep(time.Second)
 		player.currentSong++
 	}
 }
 
-func (player *FilePlayer) Play(song string, vc *discordgo.VoiceConnection) {
+func (player *FilePlayer) Skip(next chan string) {
+	player.isPlaying = false
+	player.currentSong++
+	current := player.CurrentSong()
+	next <- current
 
+	player.done <- true
+	go player.Play(current)
+
+}
+
+func (player *FilePlayer) Play(song string) {
+	vc := player.connection
 	player.isPlaying = true
 
 	err := vc.Speaking(true)
@@ -71,7 +113,6 @@ func (player *FilePlayer) Play(song string, vc *discordgo.VoiceConnection) {
 	// buffered channels
 	pcmChannel := make(chan []byte, 50)
 	opusChannel := make(chan []byte, 50)
-	done := make(chan bool)
 
 	//sending/streaming pcm into the pcm channel
 	go pipePCM(stdout, pcmChannel)
@@ -83,9 +124,9 @@ func (player *FilePlayer) Play(song string, vc *discordgo.VoiceConnection) {
 	time.Sleep(200 * time.Millisecond)
 
 	//sending opus frames to the VoiceConnection
-	go sendOpus(opusChannel, done, vc)
+	go sendOpus(opusChannel, vc, player.done) //waiting for done to be true
 
-	<-done
+	<-player.done
 	player.isPlaying = false
 	fmt.Println("Music ended")
 }
@@ -127,7 +168,7 @@ func encodePCM(pcmChannel chan []byte, opusChannel chan []byte) {
 	close(opusChannel)
 }
 
-func sendOpus(opusChannel chan []byte, done chan bool, vc *discordgo.VoiceConnection) {
+func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, done chan bool) {
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	for pkt := range opusChannel {

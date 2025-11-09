@@ -4,11 +4,14 @@ import "github.com/bwmarrin/discordgo"
 
 type Player interface {
 	//commands
-	Play(connection discordgo.VoiceConnection) error
-	Stop() error
-	Resume() error
-	Skip() error
-	//
+	Start()
+	Play(song string, connection *discordgo.VoiceConnection)
+	Stop()
+	Resume()
+	Skip()
+	//misc
+	CurrentSong() string
+	IsPlaying() bool
 	SetSession(session *discordgo.Session)
 }
 

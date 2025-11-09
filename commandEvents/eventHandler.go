@@ -13,15 +13,21 @@ const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
 
+type PlayerManager struct {
+	player *audio.FilePlayer
+}
+
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	manager := PlayerManager{&audio.FilePlayer{}}
+
 	event := i.ApplicationCommandData().Name
 	switch event {
 	case "play":
-		handlePlayEvent(s, i)
+		manager.handlePlayEvent(s, i)
 	case "skip":
-		handleSkipEvent(s, i)
+		manager.handleSkipEvent(s, i)
 	case "pause":
-		handlePauseEvent(s, i)
+		manager.handlePauseEvent(s, i)
 	}
 }
 
@@ -35,7 +41,7 @@ func findChannel(s *discordgo.Session, i *discordgo.InteractionCreate) (string, 
 	return voiceState.ChannelID, nil
 }
 
-func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	userChannelID, err := findChannel(s, i)
 	if err != nil {
@@ -66,9 +72,6 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			},
 		}},
 	})
-	player := audio.FilePlayer{}
-	player.SetSession(s)
-
 	//waiting for voice connection
 	vc := <-voice
 	//waiting for voice connection to be ready
@@ -76,27 +79,33 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		time.Sleep(10 * time.Millisecond)
 		fmt.Println("Waiting for websocket to open")
 	}
-	if !player.IsPlaying() {
-		player.Start(vc)
+	manager.player.SetSession(s)
+	manager.player.SetConnection(vc)
+
+	if !manager.player.IsPlaying() {
+		manager.player.Start()
 	} else {
 		//queue result
 	}
 }
 
-func handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	next := make(chan string)
+	go manager.player.Skip(next)
+	current := <-next
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       "Song Skipped",
-				Description: "Next song: ...",
+				Title:       i.Member.User.Username + " skipped this song",
+				Description: "Playing next song: " + current,
 				Color:       RED,
 			},
 		}},
 	})
 }
 
-func handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
