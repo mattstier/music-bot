@@ -14,11 +14,11 @@ const RED = 0xE02700
 const GREEN = 0x0FE000
 const defaultPlatform = "FileUpload"
 
+var manager *PlayerManager
+
 type PlayerManager struct {
 	player *audio.FilePlayer
 }
-
-var manager *PlayerManager
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	platform := defaultPlatform
@@ -41,10 +41,12 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println("Not yet implemented...")
 		fallthrough
 	case "FileUpload":
-		manager = &PlayerManager{&audio.FilePlayer{}}
+
+		manager = &PlayerManager{audio.InitFilePlayer()}
 
 	default:
-		manager = &PlayerManager{&audio.FilePlayer{}}
+		manager = &PlayerManager{audio.InitFilePlayer()}
+
 	}
 
 	//select which event to handle
@@ -75,6 +77,18 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 		fmt.Println(userChannelID, " | Error finding channel")
 		return
 	}
+	query := i.ApplicationCommandData().Options[0]
+	result := manager.player.FindSong(query)
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+			{
+				Title:       "Song \"" + result + "\" queued",
+				Description: i.Member.User.Username + " added a song to the queue",
+				Color:       PURPLE,
+			},
+		}},
+	})
 
 	//joining with context, deprecated in the new version
 	//but the fork for the fix of the audio channel issue is in v26 not v29
@@ -87,18 +101,6 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 		voice <- vc
 	}()
 
-	query := i.ApplicationCommandData().Options[0].StringValue()
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       "Playing Song:",
-				Description: "\"" + query + "\"",
-				//purple color
-				Color: PURPLE,
-			},
-		}},
-	})
 	//waiting for voice connection
 	vc := <-voice
 	//waiting for voice connection to be ready
@@ -108,9 +110,10 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	manager.player.SetSession(s)
 	manager.player.SetConnection(vc)
+	manager.player.SetInteraction(i)
 
 	if !manager.player.IsPlaying() {
-		manager.player.Start()
+		go manager.player.Start()
 	} else {
 		//queue result
 	}

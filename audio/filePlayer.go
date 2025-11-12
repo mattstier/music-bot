@@ -18,13 +18,15 @@ const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
 const sampleRate = 48000
 const channels = 2 // mono; 2 for stereo
 const audioPath = "./audio/files"
+const PURPLE = 0xA21DB9
 
 type FilePlayer struct {
 	isPlaying   bool
 	songs       []string
 	currentSong int
-	done        chan bool
+	done        chan struct{}
 	session     *discordgo.Session
+	interaction *discordgo.InteractionCreate
 	connection  *discordgo.VoiceConnection
 }
 
@@ -50,6 +52,10 @@ func (player *FilePlayer) SetSession(session *discordgo.Session) {
 	player.session = session
 }
 
+func (player *FilePlayer) SetInteraction(i *discordgo.InteractionCreate) {
+	player.interaction = i
+}
+
 func (player *FilePlayer) SetConnection(connection *discordgo.VoiceConnection) {
 	player.connection = connection
 }
@@ -58,21 +64,28 @@ func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
+func InitFilePlayer() *FilePlayer {
+	return &FilePlayer{
+		isPlaying:   false,
+		songs:       loadFileNames(audioPath),
+		currentSong: 0,
+		done:        make(chan struct{}),
+		session:     nil,
+		connection:  nil,
+	}
+}
+
 func (player *FilePlayer) Start() {
-
-	done := make(chan bool)
-
-	player.done = done
-	player.songs = loadFileNames(audioPath)
-	player.currentSong = 0
 
 	for i := player.currentSong; i < len(player.songs); i++ {
 		current := player.songs[i]
 		fmt.Println("Current: ", current)
 		fmt.Println("Position: ", i)
 		fmt.Println(player.songs)
-		player.Play(current)
-
+		go player.Play(current)
+		//wait for song to finish
+		<-player.done
+		//wait a second between songs
 		time.Sleep(time.Second)
 		player.currentSong++
 	}
@@ -84,12 +97,19 @@ func (player *FilePlayer) Skip(next chan string) {
 	current := player.CurrentSong()
 	next <- current
 
-	player.done <- true
+	player.done <- struct{}{}
 	go player.Play(current)
 
 }
 
 func (player *FilePlayer) Play(song string) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Playing Song:",
+		Description: "\"" + player.CurrentSong() + "\"",
+		Color:       PURPLE,
+	}
+	//show song to be played
+	player.session.ChannelMessageSendEmbed(player.interaction.ChannelID, embed)
 	vc := player.connection
 	player.isPlaying = true
 
@@ -132,6 +152,12 @@ func (player *FilePlayer) Play(song string) {
 	fmt.Println("Music ended")
 }
 
+// returns the name of the result found
+func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
+	//returning the original string => only for now
+	return query.StringValue()
+}
+
 func pipePCM(stdout io.ReadCloser, pcmChannel chan []byte) {
 	buf := make([]byte, frameSize)
 	var pcmBuf []byte
@@ -169,14 +195,14 @@ func encodePCM(pcmChannel chan []byte, opusChannel chan []byte) {
 	close(opusChannel)
 }
 
-func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, done chan bool) {
+func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, done chan struct{}) {
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	for pkt := range opusChannel {
 		<-ticker.C
 		vc.OpusSend <- pkt
 	}
-	done <- true
+	done <- struct{}{}
 }
 
 func bytesToInt16(buf []byte) []int16 {
