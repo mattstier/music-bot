@@ -6,7 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const GUILD_ID = ""
+const GUILD_ID = "771489027740139531"
 
 var PlayCommand = &discordgo.ApplicationCommand{
 	Name:        "play",
@@ -27,6 +27,19 @@ var playOptions = []*discordgo.ApplicationCommandOption{
 		Description: "The song will be repeated this many times",
 		Required:    false,
 	},
+	{
+		Type:        discordgo.ApplicationCommandOptionString,
+		Name:        "platform",
+		Description: "What platform you want to get the given song from.",
+		Choices:     platformSelectMenu,
+		Required:    false,
+	},
+}
+
+var platformSelectMenu = []*discordgo.ApplicationCommandOptionChoice{
+	{Name: "Youtube", Value: "Youtube"},
+	{Name: "SoundCloud", Value: "SoundCloud"},
+	{Name: "File Upload", Value: "FileUpload"},
 }
 
 var SkipCommand = &discordgo.ApplicationCommand{
@@ -39,11 +52,17 @@ var PauseCommand = &discordgo.ApplicationCommand{
 	Description: "Toggle pause/resume current song playing",
 }
 
+var UploadFileCommand = &discordgo.ApplicationCommand{
+	Name:        "upload",
+	Description: "Upload an audio file that you can play later.",
+}
+
 func RegisterCommands(session *discordgo.Session) {
 	commands := []*discordgo.ApplicationCommand{
 		PlayCommand,
 		PauseCommand,
 		SkipCommand,
+		UploadFileCommand,
 	}
 	for _, command := range commands {
 		_, err := session.ApplicationCommandCreate(session.State.User.ID, GUILD_ID, command)

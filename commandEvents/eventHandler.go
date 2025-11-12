@@ -12,6 +12,7 @@ import (
 const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
+const defaultPlatform = "FileUpload"
 
 type PlayerManager struct {
 	player *audio.FilePlayer
@@ -19,10 +20,33 @@ type PlayerManager struct {
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	manager := PlayerManager{&audio.FilePlayer{}}
+	platform := defaultPlatform
+	event := i.ApplicationCommandData()
 
-	event := i.ApplicationCommandData().Name
-	switch event {
+	//find platform TODO: make into a function
+	for i := 0; i < len(event.Options); i++ {
+		current := event.Options[i].StringValue()
+		if current == "platform" {
+			platform = current
+		}
+	}
+	//select the right audio player for the platform
+	switch platform {
+	case "Youtube":
+		fmt.Println("Not yet implemented...")
+	case "SoundCloud":
+		fmt.Println("Not yet implemented...")
+	case "FileUpload":
+		manager.player = &audio.FilePlayer{}
+
+	default:
+		manager.player = &audio.FilePlayer{}
+	}
+
+	//select which event to handle
+	switch event.Name {
 	case "play":
+		fmt.Println("Do something....")
 		manager.handlePlayEvent(s, i)
 	case "skip":
 		manager.handleSkipEvent(s, i)

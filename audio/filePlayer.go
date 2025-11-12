@@ -11,6 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"gopkg.in/hraban/opus.v2"
+	_ "gopkg.in/hraban/opus.v2"
 )
 
 const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
