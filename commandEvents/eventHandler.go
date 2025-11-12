@@ -18,15 +18,17 @@ type PlayerManager struct {
 	player *audio.FilePlayer
 }
 
+var manager *PlayerManager
+
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	manager := PlayerManager{&audio.FilePlayer{}}
 	platform := defaultPlatform
 	event := i.ApplicationCommandData()
 
 	//find platform TODO: make into a function
 	for i := 0; i < len(event.Options); i++ {
 		current := event.Options[i].StringValue()
-		if current == "platform" {
+		//TODO: find a better way to do this
+		if current == "Youtube" || current == "SoundCloud" || current == "FileUpload" {
 			platform = current
 		}
 	}
@@ -34,19 +36,20 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch platform {
 	case "Youtube":
 		fmt.Println("Not yet implemented...")
+		fallthrough
 	case "SoundCloud":
 		fmt.Println("Not yet implemented...")
+		fallthrough
 	case "FileUpload":
-		manager.player = &audio.FilePlayer{}
+		manager = &PlayerManager{&audio.FilePlayer{}}
 
 	default:
-		manager.player = &audio.FilePlayer{}
+		manager = &PlayerManager{&audio.FilePlayer{}}
 	}
 
 	//select which event to handle
 	switch event.Name {
 	case "play":
-		fmt.Println("Do something....")
 		manager.handlePlayEvent(s, i)
 	case "skip":
 		manager.handleSkipEvent(s, i)
