@@ -42,7 +42,7 @@ func (player *FilePlayer) Resume() {
 
 func (player *FilePlayer) CurrentSong() string {
 
-	if player.songs != nil && len(player.songs) > 0 {
+	if player.songs != nil && len(player.songs) > 0 && player.currentSong < len(player.songs) {
 		return player.songs[player.currentSong]
 	}
 	return "Couldn't find next song"
@@ -80,7 +80,6 @@ func (player *FilePlayer) Start() {
 	for i := player.currentSong; i < len(player.songs); i++ {
 		current := player.songs[i]
 		fmt.Println("Current: ", current)
-		fmt.Println("Position: ", i)
 		fmt.Println(player.songs)
 		go player.Play(current)
 		//wait for song to finish
@@ -99,10 +98,10 @@ func (player *FilePlayer) Skip(next chan string) {
 
 	player.done <- struct{}{}
 	go player.Play(current)
-
 }
 
 func (player *FilePlayer) Play(song string) {
+	player.done = make(chan struct{})
 	embed := &discordgo.MessageEmbed{
 		Title:       "Playing Song:",
 		Description: "\"" + player.CurrentSong() + "\"",
@@ -134,22 +133,19 @@ func (player *FilePlayer) Play(song string) {
 	// buffered channels
 	pcmChannel := make(chan []byte, 50)
 	opusChannel := make(chan []byte, 50)
-
 	//sending/streaming pcm into the pcm channel
 	go pipePCM(stdout, pcmChannel)
-
 	//encoding and sending pcms into opus frames to the opus channel
 	go encodePCM(pcmChannel, opusChannel)
-
 	// 200 ms latency cushion
 	time.Sleep(200 * time.Millisecond)
-
 	//sending opus frames to the VoiceConnection
 	go sendOpus(opusChannel, vc, player.done) //waiting for done to be true
 
 	<-player.done
 	player.isPlaying = false
 	fmt.Println("Music ended")
+
 }
 
 // returns the name of the result found

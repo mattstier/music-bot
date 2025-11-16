@@ -12,7 +12,6 @@ import (
 const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
-const defaultPlatform = "FileUpload"
 
 var manager *PlayerManager
 
@@ -21,7 +20,7 @@ type PlayerManager struct {
 }
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	platform := defaultPlatform
+	var platform string
 	event := i.ApplicationCommandData()
 
 	//find platform TODO: make into a function
@@ -41,12 +40,13 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println("Not yet implemented...")
 		fallthrough
 	case "FileUpload":
-
-		manager = &PlayerManager{audio.InitFilePlayer()}
-
+		if manager == nil {
+			manager = &PlayerManager{audio.InitFilePlayer()}
+		}
 	default:
-		manager = &PlayerManager{audio.InitFilePlayer()}
-
+		if manager == nil {
+			manager = &PlayerManager{audio.InitFilePlayer()}
+		}
 	}
 
 	//select which event to handle
