@@ -136,13 +136,20 @@ func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo
 }
 
 func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	user := i.Member.User.Username
+	action := "paused"
+	if manager.player.IsPlaying() {
+		action = "resumed"
+	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 			{
-				Title: "Song Paused",
-				Color: GREEN,
+				Title:       user + action + " this song",
+				Description: manager.player.CurrentSong(),
+				Color:       GREEN,
 			},
 		}},
 	})
+	go manager.player.TogglePauseResume()
 }

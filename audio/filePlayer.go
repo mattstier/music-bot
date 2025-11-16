@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,15 +15,16 @@ import (
 	_ "gopkg.in/hraban/opus.v2"
 )
 
-const frameSize = 960 * 2 * 2 //960 * 2 channels (stereo) * 2 bytes
+const frameSize = 960 * channels * 2 //960 * channels * 2 bytes
 const sampleRate = 48000
-const channels = 2 // mono; 2 for stereo
+const channels = 2 // 1 for mono; 2 for stereo
 const audioPath = "./audio/files"
 const PURPLE = 0xA21DB9
 
 type FilePlayer struct {
 	isPlaying   bool
 	songs       []string
+	timestamp   time.Duration
 	currentSong int
 	done        chan struct{}
 	session     *discordgo.Session
@@ -30,14 +32,15 @@ type FilePlayer struct {
 	connection  *discordgo.VoiceConnection
 }
 
-func (player *FilePlayer) Stop() {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (player *FilePlayer) Resume() {
-	//TODO implement me
-	panic("implement me")
+func (player *FilePlayer) TogglePauseResume() {
+	if player.IsPlaying() {
+		//stop playing
+		player.done <- struct{}{}
+	} else {
+		player.done = make(chan struct{})
+		//play the song again (looks at player timestamp)
+		go player.Play(player.CurrentSong())
+	}
 }
 
 func (player *FilePlayer) CurrentSong() string {
@@ -72,6 +75,7 @@ func InitFilePlayer() *FilePlayer {
 		done:        make(chan struct{}),
 		session:     nil,
 		connection:  nil,
+		timestamp:   0,
 	}
 }
 
@@ -96,12 +100,14 @@ func (player *FilePlayer) Skip(next chan string) {
 	current := player.CurrentSong()
 	next <- current
 
+	//stop channel
 	player.done <- struct{}{}
+	//clear channel to run again
+	player.done = make(chan struct{})
 	go player.Play(current)
 }
 
 func (player *FilePlayer) Play(song string) {
-	player.done = make(chan struct{})
 	embed := &discordgo.MessageEmbed{
 		Title:       "Playing Song:",
 		Description: "\"" + player.CurrentSong() + "\"",
@@ -117,10 +123,11 @@ func (player *FilePlayer) Play(song string) {
 		log.Fatal(err)
 	}
 	cmd := exec.Command("ffmpeg",
+		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
 		"-i", audioPath+"/"+song,
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
-		"-ar", "48000",
-		"-ac", "2",
+		"-ar", strconv.Itoa(sampleRate),
+		"-ac", strconv.Itoa(channels),
 		"-f", "s16le",
 		"pipe:1",
 	)
@@ -134,13 +141,13 @@ func (player *FilePlayer) Play(song string) {
 	pcmChannel := make(chan []byte, 50)
 	opusChannel := make(chan []byte, 50)
 	//sending/streaming pcm into the pcm channel
-	go pipePCM(stdout, pcmChannel)
+	go bufferPCM(stdout, pcmChannel)
 	//encoding and sending pcms into opus frames to the opus channel
 	go encodePCM(pcmChannel, opusChannel)
 	// 200 ms latency cushion
 	time.Sleep(200 * time.Millisecond)
 	//sending opus frames to the VoiceConnection
-	go sendOpus(opusChannel, vc, player.done) //waiting for done to be true
+	go sendOpus(opusChannel, vc, player) //waiting for done to be true
 
 	<-player.done
 	player.isPlaying = false
@@ -154,7 +161,7 @@ func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractio
 	return query.StringValue()
 }
 
-func pipePCM(stdout io.ReadCloser, pcmChannel chan []byte) {
+func bufferPCM(stdout io.ReadCloser, pcmChannel chan []byte) {
 	buf := make([]byte, frameSize)
 	var pcmBuf []byte
 	for {
@@ -175,6 +182,7 @@ func pipePCM(stdout io.ReadCloser, pcmChannel chan []byte) {
 	close(pcmChannel)
 }
 
+// encodes pcm to Opus format
 func encodePCM(pcmChannel chan []byte, opusChannel chan []byte) {
 	enc, _ := opus.NewEncoder(sampleRate, channels, opus.AppVoIP)
 	data := make([]byte, frameSize)
@@ -191,14 +199,17 @@ func encodePCM(pcmChannel chan []byte, opusChannel chan []byte) {
 	close(opusChannel)
 }
 
-func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, done chan struct{}) {
+// sends opus frames to discord voice channel
+func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, player *FilePlayer) {
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	for pkt := range opusChannel {
 		<-ticker.C
 		vc.OpusSend <- pkt
+		player.timestamp += time.Millisecond * 20
 	}
-	done <- struct{}{}
+	// if no more packets to send, signal done
+	player.done <- struct{}{}
 }
 
 func bytesToInt16(buf []byte) []int16 {
