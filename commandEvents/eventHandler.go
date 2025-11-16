@@ -137,19 +137,29 @@ func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo
 
 func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
-	action := "paused"
+	position := manager.player.Timestamp()
+	currentSong := manager.player.CurrentSong()
+	action := "resumed"
 	if manager.player.IsPlaying() {
-		action = "resumed"
+		action = "paused"
 	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       user + action + " this song",
-				Description: manager.player.CurrentSong(),
+				Title:       user + " " + action + " this song",
+				Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
 				Color:       GREEN,
 			},
 		}},
 	})
 	go manager.player.TogglePauseResume()
+}
+
+func formatTimestamp(d time.Duration) string {
+	totalSeconds := int(d.Seconds())
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }

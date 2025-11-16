@@ -36,9 +36,11 @@ func (player *FilePlayer) TogglePauseResume() {
 	if player.IsPlaying() {
 		//stop playing
 		player.done <- struct{}{}
+		fmt.Println(fmt.Sprintf("Song stopped at %v seconds", player.timestamp.Seconds()))
 	} else {
 		player.done = make(chan struct{})
 		//play the song again (looks at player timestamp)
+		fmt.Println(fmt.Sprintf("Resuming song from %v seconds", player.timestamp.Seconds()))
 		go player.Play(player.CurrentSong())
 	}
 }
@@ -49,6 +51,10 @@ func (player *FilePlayer) CurrentSong() string {
 		return player.songs[player.currentSong]
 	}
 	return "Couldn't find next song"
+}
+
+func (player *FilePlayer) Timestamp() time.Duration {
+	return player.timestamp
 }
 
 func (player *FilePlayer) SetSession(session *discordgo.Session) {
@@ -210,6 +216,8 @@ func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, player *Fi
 	}
 	// if no more packets to send, signal done
 	player.done <- struct{}{}
+	//reset timestamp, so next song plays from beginning
+	player.timestamp = 0
 }
 
 func bytesToInt16(buf []byte) []int16 {
