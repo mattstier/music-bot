@@ -1,10 +1,10 @@
-package audio
+package filePlayer
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -18,8 +18,8 @@ import (
 const frameSize = 960 * channels * 2 //960 * channels * 2 bytes
 const sampleRate = 48000
 const channels = 2 // 1 for mono; 2 for stereo
-const audioPath = "./audio/files"
-const PURPLE = 0xA21DB9
+const sendRate = 20 * time.Millisecond
+const audioPath = "./audio/filePlayer/files"
 
 type FilePlayer struct {
 	isPlaying   bool
@@ -114,38 +114,42 @@ func (player *FilePlayer) Skip(next chan string) {
 }
 
 func (player *FilePlayer) Play(song string) {
-	embed := &discordgo.MessageEmbed{
-		Title:       "Playing Song:",
-		Description: "\"" + player.CurrentSong() + "\"",
-		Color:       PURPLE,
-	}
-	//show song to be played
-	player.session.ChannelMessageSendEmbed(player.interaction.ChannelID, embed)
+
 	vc := player.connection
 	player.isPlaying = true
+	player.displayCurrentSong()
+	vc.Speaking(true)
 
-	err := vc.Speaking(true)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cmd := exec.Command("ffmpeg",
-		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
-		"-i", audioPath+"/"+song,
-		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
-		"-ar", strconv.Itoa(sampleRate),
-		"-ac", strconv.Itoa(channels),
-		"-f", "s16le",
-		"pipe:1",
-	)
 	//creating pipe with a ffmpeg command
+	cmd, cancel := player.startFFMPEG()
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Stderr = os.Stderr
 	cmd.Start()
 	defer cmd.Wait()
+	//local
+	sessionDone := make(chan struct{})
 
 	// buffered channels
 	pcmChannel := make(chan []byte, 50)
 	opusChannel := make(chan []byte, 50)
+
+	//handles stopping, song finishing etc
+	go func() {
+		select {
+		//triggers if done has been signaled
+		case <-player.done:
+			stdout.Close() // always close the pipe first, to not break it
+			cancel()
+			fmt.Println("Player stopped")
+		case <-sessionDone:
+			fmt.Println("Song finished")
+		}
+		player.isPlaying = false
+		//reset timestamp, so next song plays from beginning
+		player.timestamp = 0
+		vc.Speaking(false)
+
+	}()
 	//sending/streaming pcm into the pcm channel
 	go bufferPCM(stdout, pcmChannel)
 	//encoding and sending pcms into opus frames to the opus channel
@@ -153,11 +157,7 @@ func (player *FilePlayer) Play(song string) {
 	// 200 ms latency cushion
 	time.Sleep(200 * time.Millisecond)
 	//sending opus frames to the VoiceConnection
-	go sendOpus(opusChannel, vc, player) //waiting for done to be true
-
-	<-player.done
-	player.isPlaying = false
-	fmt.Println("Music ended")
+	go sendOpus(opusChannel, vc, player, sessionDone) //waiting for done to be true
 
 }
 
@@ -206,18 +206,24 @@ func encodePCM(pcmChannel chan []byte, opusChannel chan []byte) {
 }
 
 // sends opus frames to discord voice channel
-func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, player *FilePlayer) {
-	ticker := time.NewTicker(20 * time.Millisecond)
+func sendOpus(opusChannel chan []byte, vc *discordgo.VoiceConnection, player *FilePlayer, sessionDone chan struct{}) {
+	ticker := time.NewTicker(sendRate)
 	defer ticker.Stop()
 	for pkt := range opusChannel {
 		<-ticker.C
-		vc.OpusSend <- pkt
-		player.timestamp += time.Millisecond * 20
+		select {
+		case vc.OpusSend <- pkt:
+			//send, and increase timestamp if successful
+			player.timestamp += sendRate
+		case <-player.done:
+			return
+		default:
+			//drop packet if cannot send
+		}
+
 	}
 	// if no more packets to send, signal done
-	player.done <- struct{}{}
-	//reset timestamp, so next song plays from beginning
-	player.timestamp = 0
+	close(sessionDone)
 }
 
 func bytesToInt16(buf []byte) []int16 {
@@ -235,4 +241,18 @@ func loadFileNames(path string) []string {
 		fileNames[num] = file.Name()
 	}
 	return fileNames
+}
+
+func (player *FilePlayer) startFFMPEG() (*exec.Cmd, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, "ffmpeg",
+		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
+		"-i", audioPath+"/"+player.CurrentSong(),
+		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
+		"-ar", strconv.Itoa(sampleRate),
+		"-ac", strconv.Itoa(channels),
+		"-f", "s16le",
+		"pipe:1",
+	)
+	return cmd, cancel
 }

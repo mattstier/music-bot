@@ -3,7 +3,7 @@ package commandEvents
 import (
 	"context"
 	"fmt"
-	"music-bot/audio"
+	"music-bot/audio/filePlayer"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -16,7 +16,7 @@ const GREEN = 0x0FE000
 var manager *PlayerManager
 
 type PlayerManager struct {
-	player *audio.FilePlayer
+	player *filePlayer.FilePlayer
 }
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -41,11 +41,11 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fallthrough
 	case "FileUpload":
 		if manager == nil {
-			manager = &PlayerManager{audio.InitFilePlayer()}
+			manager = &PlayerManager{filePlayer.InitFilePlayer()}
 		}
 	default:
 		if manager == nil {
-			manager = &PlayerManager{audio.InitFilePlayer()}
+			manager = &PlayerManager{filePlayer.InitFilePlayer()}
 		}
 	}
 
