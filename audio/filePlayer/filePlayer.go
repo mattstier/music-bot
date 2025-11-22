@@ -79,12 +79,12 @@ func (player *FilePlayer) Start() {
 		current := player.songs[i]
 		fmt.Println("Current: ", current)
 		fmt.Println(player.songs)
-		go player.Play(current)
+		player.Play(current)
 		//wait for song to finish
 		<-player.done
 		//wait a second between songs
 		time.Sleep(time.Second)
-		player.currentSong++
+		//player.currentSong++
 	}
 }
 
@@ -98,6 +98,7 @@ func (player *FilePlayer) Skip(next chan string) {
 	player.done <- struct{}{}
 	//clear channel to run again
 	player.done = make(chan struct{})
+	player.timestamp = 0
 	go player.Play(current)
 }
 

@@ -43,11 +43,11 @@ func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection) {
 			cancel()
 			fmt.Println("Player stopped")
 		case <-sessionDone:
+			//reset timestamp, so next song plays from beginning
+			player.timestamp = 0
 			fmt.Println("Song finished")
 		}
 		player.isPlaying = false
-		//reset timestamp, so next song plays from beginning
-		player.timestamp = 0
 		player.done <- struct{}{}
 
 	}()
