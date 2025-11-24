@@ -1,0 +1,18 @@
+# Config file
+[build]
+  # build app
+  cmd = "go build -o main main.go"
+  # binary to watch
+  bin = "main"
+  # working dir
+  dir = "."
+  include_ext = ["go"]
+  exclude_dir = ["vendor"]
+  # command after building
+  run_after_build = "chmod +x main"
+
+  poll = true
+  poll_interval = 1000  # milliseconds
+
+[log]
+  level = "debug"

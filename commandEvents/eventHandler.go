@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"music-bot/audio"
+	"music-bot/audio/filePlayer"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -13,15 +14,50 @@ const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
 
+var manager *PlayerManager
+
+type PlayerManager struct {
+	player audio.Player
+}
+
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	event := i.ApplicationCommandData().Name
-	switch event {
+	var platform string
+	event := i.ApplicationCommandData()
+
+	//find platform TODO: make into a function
+	for i := 0; i < len(event.Options); i++ {
+		current := event.Options[i].StringValue()
+		//TODO: find a better way to do this
+		if current == "Youtube" || current == "SoundCloud" || current == "FileUpload" {
+			platform = current
+		}
+	}
+	//select the right audio player for the platform
+	switch platform {
+	case "Youtube":
+		fmt.Println("Not yet implemented...")
+		fallthrough
+	case "SoundCloud":
+		fmt.Println("Not yet implemented...")
+		fallthrough
+	case "FileUpload":
+		if manager == nil {
+			manager = &PlayerManager{filePlayer.InitFilePlayer()}
+		}
+	default:
+		if manager == nil {
+			manager = &PlayerManager{filePlayer.InitFilePlayer()}
+		}
+	}
+
+	//select which event to handle
+	switch event.Name {
 	case "play":
-		handlePlayEvent(s, i)
+		manager.handlePlayEvent(s, i)
 	case "skip":
-		handleSkipEvent(s, i)
+		manager.handleSkipEvent(s, i)
 	case "pause":
-		handlePauseEvent(s, i)
+		manager.handlePauseEvent(s, i)
 	}
 }
 
@@ -35,13 +71,25 @@ func findChannel(s *discordgo.Session, i *discordgo.InteractionCreate) (string, 
 	return voiceState.ChannelID, nil
 }
 
-func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	userChannelID, err := findChannel(s, i)
 	if err != nil {
 		fmt.Println(userChannelID, " | Error finding channel")
 		return
 	}
+	query := i.ApplicationCommandData().Options[0]
+	result := manager.player.FindSong(query)
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+			{
+				Title:       "Song \"" + result + "\" queued",
+				Description: i.Member.User.Username + " added a song to the queue",
+				Color:       PURPLE,
+			},
+		}},
+	})
 
 	//joining with context, deprecated in the new version
 	//but the fork for the fix of the audio channel issue is in v26 not v29
@@ -54,21 +102,6 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		voice <- vc
 	}()
 
-	query := i.ApplicationCommandData().Options[0].StringValue()
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       "Playing Song:",
-				Description: "\"" + query + "\"",
-				//purple color
-				Color: PURPLE,
-			},
-		}},
-	})
-	player := audio.FilePlayer{}
-	player.SetSession(s)
-
 	//waiting for voice connection
 	vc := <-voice
 	//waiting for voice connection to be ready
@@ -76,34 +109,58 @@ func handlePlayEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		time.Sleep(10 * time.Millisecond)
 		fmt.Println("Waiting for websocket to open")
 	}
-	if !player.IsPlaying() {
-		player.Play(vc)
+	manager.player.SetSession(s)
+	manager.player.SetConnection(vc)
+	manager.player.SetInteraction(i)
+
+	if !manager.player.IsPlaying() {
+		go manager.player.Start()
 	} else {
 		//queue result
 	}
 }
 
-func handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	next := make(chan string)
+	go manager.player.Skip(next)
+	current := <-next
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       "Song Skipped",
-				Description: "Next song: ...",
+				Title:       i.Member.User.Username + " skipped this song",
+				Description: "Playing next song: " + current,
 				Color:       RED,
 			},
 		}},
 	})
 }
 
-func handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	user := i.Member.User.Username
+	position := manager.player.Timestamp()
+	currentSong := manager.player.CurrentSong()
+	action := "resumed"
+	if manager.player.IsPlaying() {
+		action = "paused"
+	}
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 			{
-				Title: "Song Paused",
-				Color: GREEN,
+				Title:       user + " " + action + " this song",
+				Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
+				Color:       GREEN,
 			},
 		}},
 	})
+	go manager.player.TogglePauseResume()
+}
+
+func formatTimestamp(d time.Duration) string {
+	totalSeconds := int(d.Seconds())
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
