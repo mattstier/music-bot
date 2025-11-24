@@ -3,6 +3,7 @@ package commandEvents
 import (
 	"context"
 	"fmt"
+	"music-bot/audio"
 	"music-bot/audio/filePlayer"
 	"time"
 
@@ -16,7 +17,7 @@ const GREEN = 0x0FE000
 var manager *PlayerManager
 
 type PlayerManager struct {
-	player *filePlayer.FilePlayer
+	player audio.Player
 }
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {

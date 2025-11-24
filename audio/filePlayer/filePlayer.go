@@ -20,7 +20,13 @@ type FilePlayer struct {
 	connection  *discordgo.VoiceConnection
 }
 
+const delayBetweenSongs = 1 * time.Second
+
 func (player *FilePlayer) TogglePauseResume() {
+	//if not on a voice channel, prevent action
+	if player.session == nil {
+		return
+	}
 	if player.IsPlaying() {
 		//stop playing
 		player.done <- struct{}{}
@@ -75,38 +81,37 @@ func InitFilePlayer() *FilePlayer {
 
 func (player *FilePlayer) Start() {
 
-	for i := player.currentSong; i < len(player.songs); i++ {
-		current := player.songs[i]
+	for i := 0; i < len(player.songs); i++ {
+		go player.displayCurrentSong()
+		current := player.CurrentSong()
 		fmt.Println("Current: ", current)
 		fmt.Println(player.songs)
 		player.Play(current)
-		//wait for song to finish
-		<-player.done
 		//wait a second between songs
-		time.Sleep(time.Second)
-		//player.currentSong++
+		time.Sleep(delayBetweenSongs)
+		//only increment song if the stop is from a skip
+		//(only happens when timestamp is zero)
+		if player.timestamp == 0 {
+			player.currentSong++
+		}
 	}
 }
 
 func (player *FilePlayer) Skip(next chan string) {
-	player.isPlaying = false
 	player.currentSong++
 	current := player.CurrentSong()
 	next <- current
 
 	//stop channel
 	player.done <- struct{}{}
-	//clear channel to run again
-	player.done = make(chan struct{})
 	player.timestamp = 0
 	go player.Play(current)
 }
 
 func (player *FilePlayer) Play(song string) {
-
+	player.done = make(chan struct{})
 	vc := player.connection
 	player.isPlaying = true
-	player.displayCurrentSong()
 
 	vc.Speaking(true)
 	defer vc.Speaking(false)
