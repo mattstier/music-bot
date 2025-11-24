@@ -120,6 +120,10 @@ func (player *FilePlayer) Play(song string) {
 
 }
 
+func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
+	return saveAttachment(file)
+}
+
 // returns the name of the result found
 func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
 	//returning the original string => only for now

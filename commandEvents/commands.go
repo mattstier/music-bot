@@ -55,6 +55,14 @@ var PauseCommand = &discordgo.ApplicationCommand{
 var UploadFileCommand = &discordgo.ApplicationCommand{
 	Name:        "upload",
 	Description: "Upload an audio file that you can play later.",
+	Options: []*discordgo.ApplicationCommandOption{
+		{
+			Type:        discordgo.ApplicationCommandOptionAttachment,
+			Name:        "file",
+			Description: "File to upload",
+			Required:    true,
+		},
+	},
 }
 
 func RegisterCommands(session *discordgo.Session) {

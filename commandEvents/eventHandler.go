@@ -21,12 +21,12 @@ type PlayerManager struct {
 }
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	var platform string
+	var platform any
 	event := i.ApplicationCommandData()
 
 	//find platform TODO: make into a function
 	for i := 0; i < len(event.Options); i++ {
-		current := event.Options[i].StringValue()
+		current := event.Options[i].Value
 		//TODO: find a better way to do this
 		if current == "Youtube" || current == "SoundCloud" || current == "FileUpload" {
 			platform = current
@@ -58,6 +58,9 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleSkipEvent(s, i)
 	case "pause":
 		manager.handlePauseEvent(s, i)
+	case "upload":
+
+		handleFileUploadEvent(s, i, manager.player.(*filePlayer.FilePlayer))
 	}
 }
 
@@ -163,4 +166,34 @@ func formatTimestamp(d time.Duration) string {
 	minutes := (totalSeconds % 3600) / 60
 	seconds := totalSeconds % 60
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+}
+
+func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+	attachmentID := i.ApplicationCommandData().Options[0].Value.(string)
+	attachment := i.ApplicationCommandData().Resolved.Attachments[attachmentID]
+	fmt.Println(attachment.Filename)
+	err := player.UploadFile(attachment)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       "Failed to upload file",
+					Description: "\"" + attachment.Filename + "\"",
+					Color:       RED,
+				},
+			}},
+		})
+	} else {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       i.Member.User.Username + " uploaded the following song:",
+					Description: "\"" + attachment.Filename + "\"",
+					Color:       PURPLE,
+				},
+			}},
+		})
+	}
 }
