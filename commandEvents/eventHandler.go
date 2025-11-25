@@ -119,7 +119,8 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	if !manager.player.IsPlaying() {
 		go manager.player.Start()
 	} else {
-		//queue result
+		//queue resultkj
+		manager.player.QueueSong(result)
 	}
 }
 
@@ -179,7 +180,7 @@ func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate,
 			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
 				{
 					Title:       "Failed to upload file",
-					Description: "\"" + attachment.Filename + "\"",
+					Description: fmt.Sprintf("File: %v \nError: %v", attachment.Filename, err),
 					Color:       RED,
 				},
 			}},
