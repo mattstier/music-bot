@@ -10,10 +10,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const PURPLE = 0xA21DB9
-const RED = 0xE02700
-const GREEN = 0x0FE000
-
 var manager *PlayerManager
 
 type PlayerManager struct {
@@ -84,27 +80,9 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
 	if result != "" {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       "Song \"" + result + "\" queued",
-					Description: i.Member.User.Username + " added a song to the queue",
-					Color:       PURPLE,
-				},
-			}},
-		})
+		displaySongQueued(s, i, result)
 	} else {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       "Song not found",
-					Description: fmt.Sprintf("No results for the term \"%v\"", query.StringValue()),
-					Color:       RED,
-				},
-			}},
-		})
+		displaySongNotFound(s, i, query.StringValue())
 		return
 	}
 
@@ -142,45 +120,17 @@ func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo
 	next := make(chan string)
 	go manager.player.Skip(next)
 	current := <-next
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       i.Member.User.Username + " skipped this song",
-				Description: "Playing next song: " + current,
-				Color:       RED,
-			},
-		}},
-	})
+	displaySongSkipped(s, i, current)
 }
 
 func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	user := i.Member.User.Username
-	position := manager.player.Timestamp()
-	currentSong := manager.player.CurrentSong()
+
 	action := "resumed"
 	if manager.player.IsPlaying() {
 		action = "paused"
 	}
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       user + " " + action + " this song",
-				Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
-				Color:       GREEN,
-			},
-		}},
-	})
+	displaySongPaused(s, i, action)
 	go manager.player.TogglePauseResume()
-}
-
-func formatTimestamp(d time.Duration) string {
-	totalSeconds := int(d.Seconds())
-	hours := totalSeconds / 3600
-	minutes := (totalSeconds % 3600) / 60
-	seconds := totalSeconds % 60
-	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
 func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
@@ -189,26 +139,8 @@ func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate,
 	fmt.Println(attachment.Filename)
 	err := player.UploadFile(attachment)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       "Failed to upload file",
-					Description: fmt.Sprintf("File: %v \nError: %v", attachment.Filename, err),
-					Color:       RED,
-				},
-			}},
-		})
+		displayUpload(s, i, *attachment)
 	} else {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       i.Member.User.Username + " uploaded the following song:",
-					Description: "\"" + attachment.Filename + "\"",
-					Color:       PURPLE,
-				},
-			}},
-		})
+		displayUploadError(s, i, *attachment, err)
 	}
 }
