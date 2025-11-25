@@ -83,16 +83,30 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       "Song \"" + result + "\" queued",
-				Description: i.Member.User.Username + " added a song to the queue",
-				Color:       PURPLE,
-			},
-		}},
-	})
+	if result != "" {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       "Song \"" + result + "\" queued",
+					Description: i.Member.User.Username + " added a song to the queue",
+					Color:       PURPLE,
+				},
+			}},
+		})
+	} else {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       "Song not found",
+					Description: fmt.Sprintf("No results for the term \"%v\"", query.StringValue()),
+					Color:       RED,
+				},
+			}},
+		})
+		return
+	}
 
 	//joining with context, deprecated in the new version
 	//but the fork for the fix of the audio channel issue is in v26 not v29
@@ -116,11 +130,11 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	manager.player.SetConnection(vc)
 	manager.player.SetInteraction(i)
 
-	if !manager.player.IsPlaying() {
+	manager.player.QueueSong(result)
+
+	//only autoplay when otherwise not playing and there are songs to play
+	if !manager.player.IsPlaying() && len(manager.player.GetQueue()) > 0 {
 		go manager.player.Start()
-	} else {
-		//queue result
-		manager.player.QueueSong(result)
 	}
 }
 

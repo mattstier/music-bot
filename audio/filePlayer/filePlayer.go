@@ -73,10 +73,14 @@ func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
+func (player *FilePlayer) GetQueue() []string {
+	return player.songs
+}
+
 func InitFilePlayer() *FilePlayer {
 	return &FilePlayer{
 		isPlaying:   false,
-		songs:       loadFileNames(audioPath),
+		songs:       make([]string, 0),
 		currentSong: 0,
 		done:        make(chan struct{}),
 		session:     nil,
