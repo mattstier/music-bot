@@ -119,7 +119,7 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	if !manager.player.IsPlaying() {
 		go manager.player.Start()
 	} else {
-		//queue resultkj
+		//queue result
 		manager.player.QueueSong(result)
 	}
 }

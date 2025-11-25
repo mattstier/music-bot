@@ -134,6 +134,7 @@ func (player *FilePlayer) startFFMPEG() (*exec.Cmd, context.CancelFunc) {
 		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
 		"-i", audioPath+"/"+player.CurrentSong(),
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
+		"-loglevel", "quiet",
 		"-ar", strconv.Itoa(sampleRate),
 		"-ac", strconv.Itoa(channels),
 		"-f", "s16le",

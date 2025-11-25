@@ -3,6 +3,7 @@ package filePlayer
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -18,6 +19,11 @@ type FilePlayer struct {
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
 	connection  *discordgo.VoiceConnection
+}
+
+func (player *FilePlayer) QueueSong(song string) {
+	player.songs = append(player.songs, song)
+	fmt.Println(player.songs)
 }
 
 const delayBetweenSongs = 1 * time.Second
@@ -115,7 +121,6 @@ func (player *FilePlayer) Play(song string) {
 
 	vc.Speaking(true)
 	defer vc.Speaking(false)
-
 	player.streamAudio(vc)
 
 }
@@ -126,8 +131,15 @@ func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
 
 // returns the name of the result found
 func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
-	//returning the original string => only for now
-	return query.StringValue()
+	//making it case insensitive
+	q := strings.ToLower(query.StringValue())
+	files := loadFileNames(audioPath)
+	for _, filename := range files {
+		if strings.Contains(strings.ToLower(filename), q) {
+			return filename
+		}
+	}
+	return ""
 }
 
 func loadFileNames(path string) []string {

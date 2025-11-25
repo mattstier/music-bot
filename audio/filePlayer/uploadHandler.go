@@ -3,7 +3,6 @@ package filePlayer
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -24,7 +23,6 @@ func saveAttachment(file *discordgo.MessageAttachment) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Test")
 	//only save on disk if it is a supported format
 	if !formatIsSupported(data) {
 		return errors.New("Unsupported file format")
