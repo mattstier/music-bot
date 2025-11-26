@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/masatana/go-textdistance"
 	_ "gopkg.in/hraban/opus.v2"
 )
 
@@ -135,15 +136,19 @@ func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
 
 // returns the name of the result found
 func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
+	highest := 0.0
+	var highestName string
 	//making it case insensitive
 	q := strings.ToLower(query.StringValue())
 	files := loadFileNames(audioPath)
 	for _, filename := range files {
-		if strings.Contains(strings.ToLower(filename), q) {
-			return filename
+		current := textdistance.JaroWinklerDistance(filename, q)
+		if highest < current {
+			highest = current
+			highestName = filename
 		}
 	}
-	return ""
+	return highestName
 }
 
 func loadFileNames(path string) []string {

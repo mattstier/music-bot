@@ -9,7 +9,9 @@ require (
 )
 
 require (
+	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/masatana/go-textdistance v0.0.0-20191005053614-738b0edac985 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 )
