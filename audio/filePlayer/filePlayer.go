@@ -27,6 +27,8 @@ func (player *FilePlayer) QueueSong(song string) {
 
 const delayBetweenSongs = 1 * time.Second
 
+var audioPath = "./audio/filePlayer/files"
+
 func (player *FilePlayer) TogglePauseResume() {
 	//if not on a voice channel, prevent action
 	if player.session == nil {
@@ -61,6 +63,9 @@ func (player *FilePlayer) SetSession(session *discordgo.Session) {
 }
 
 func (player *FilePlayer) SetInteraction(i *discordgo.InteractionCreate) {
+	if player.interaction == nil {
+		audioPath = audioPath + "/" + i.GuildID
+	}
 	player.interaction = i
 }
 

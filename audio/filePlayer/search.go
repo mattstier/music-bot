@@ -1,7 +1,6 @@
 package filePlayer
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"unicode"
@@ -66,14 +65,12 @@ func removeAccents(str string) string {
 		}
 		filtered = append(filtered, r)
 	}
-	fmt.Println(string(filtered))
 	return string(filtered)
 }
 
 // loads filenames from disk to the cache (along with their normalized versions)
 func loadFileNames(path string) {
 	var currentFileName string
-	fmt.Println("Cache: ", normalizedCache)
 	files, _ := os.ReadDir(path)
 
 	for _, file := range files {

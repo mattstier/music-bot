@@ -134,6 +134,7 @@ func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordg
 }
 
 func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+	manager.player.SetInteraction(i)
 	attachmentID := i.ApplicationCommandData().Options[0].Value.(string)
 	attachment := i.ApplicationCommandData().Resolved.Attachments[attachmentID]
 	fmt.Println(attachment.Filename)
