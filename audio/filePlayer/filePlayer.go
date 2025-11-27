@@ -2,12 +2,10 @@ package filePlayer
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/masatana/go-textdistance"
+	_ "golang.org/x/text/unicode/norm"
 	_ "gopkg.in/hraban/opus.v2"
 )
 
@@ -136,26 +134,5 @@ func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
 
 // returns the name of the result found
 func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
-	highest := 0.0
-	var highestName string
-	//making it case insensitive
-	q := strings.ToLower(query.StringValue())
-	files := loadFileNames(audioPath)
-	for _, filename := range files {
-		current := textdistance.JaroWinklerDistance(filename, q)
-		if highest < current {
-			highest = current
-			highestName = filename
-		}
-	}
-	return highestName
-}
-
-func loadFileNames(path string) []string {
-	files, _ := os.ReadDir(path)
-	fileNames := make([]string, len(files))
-	for num, file := range files {
-		fileNames[num] = file.Name()
-	}
-	return fileNames
+	return GetClosestMatch(query.StringValue())
 }

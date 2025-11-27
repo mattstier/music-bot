@@ -138,7 +138,7 @@ func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate,
 	attachment := i.ApplicationCommandData().Resolved.Attachments[attachmentID]
 	fmt.Println(attachment.Filename)
 	err := player.UploadFile(attachment)
-	if err != nil {
+	if err == nil {
 		displayUpload(s, i, *attachment)
 	} else {
 		displayUploadError(s, i, *attachment, err)
