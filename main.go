@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"music-bot/audio/filePlayer"
 	"music-bot/commandEvents"
 	"os"
 	"os/signal"
@@ -43,6 +42,4 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
-	//finally dump the cache (from searching) before shutdown
-	filePlayer.DumpCache()
 }

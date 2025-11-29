@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/masatana/go-textdistance"
+	_ "github.com/masatana/go-textdistance"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -19,29 +20,30 @@ const searchSimilarityThreshold = 0.15
 const weightArtist = 1
 const weightAlbum = 1
 const weightTitle = 2
-
-const normalizedCacheStore = "cache.gob"
+const normalizedCacheStore = ".cache.gob"
 const cacheBuffer = 50
 
 type SongData struct {
-	Album  string `json:"album"`
-	Artist string `json:"artist"`
-	Title  string `json:"title"`
+	Album    string `json:"album"`
+	Artist   string `json:"artist"`
+	Title    string `json:"title"`
+	Filename string
 }
 
-// cache mapping original filenames to their normalized counterparts
-// note: 50 is just the expected max number of files; minimizes resizing/rehashing overhead
-var normalizedCache = make(map[string]SongData, cacheBuffer)
+// cache mapping original filenames to their normalized SongData
+var normalizedCache map[string]SongData
 
 func GetClosestMatch(term string) string {
 	var highestName string
 	highest := 0.0
 	//normalizing input
-	q := normalize(term)
-	loadFileNames(audioPath)
+	normalizedTerm := normalize(term)
+	fmt.Println(mediaDir)
+	loadFileNames(mediaDir)
 
 	for fileName, cachedFileMetadata := range normalizedCache {
-		current := similarity(cachedFileMetadata, q)
+		cachedFileMetadata.Filename = fileName
+		current := similarity(cachedFileMetadata, normalizedTerm)
 		fmt.Printf("\nSimilarity of %v to %v is %v", cachedFileMetadata, term, current)
 		if highest < current {
 			highest = current
@@ -57,16 +59,36 @@ func GetClosestMatch(term string) string {
 // using a weighed average of the similarities of the title, artist and album
 // which use the levenshtein distance
 func similarity(metadata SongData, term string) float64 {
-	titleDistance := textdistance.LevenshteinDistance(metadata.Title, term)
-	albumDistance := textdistance.LevenshteinDistance(metadata.Album, term)
-	artistDistance := textdistance.LevenshteinDistance(metadata.Artist, term)
+	// fallback to filename if title is missing
+	title := metadata.Title
+	if title == "" {
+		title = metadata.Filename
+	}
 
-	titleSimilarity := 1.0 - (float64(titleDistance) / float64(max(len(metadata.Title), len(term))))
-	albumSimilarity := 1.0 - (float64(albumDistance) / float64(max(len(metadata.Album), len(term))))
-	artistSimilarity := 1.0 - (float64(artistDistance) / float64(max(len(metadata.Artist), len(term))))
-	sumSimilarity := titleSimilarity*weightTitle + albumSimilarity*weightAlbum + artistSimilarity*weightArtist
+	// map of field value → weight
+	fields := map[string]float64{
+		title:           weightTitle,
+		metadata.Album:  weightAlbum,
+		metadata.Artist: weightArtist,
+	}
 
-	return sumSimilarity / 3
+	var sum, total float64
+	for val, weight := range fields {
+		if val == "" {
+			continue
+		}
+		maxLen := max(len(val), len(term))
+		if maxLen == 0 {
+			continue
+		}
+		sum += (1 - float64(textdistance.LevenshteinDistance(val, term))/float64(maxLen)) * weight
+		total += weight
+	}
+
+	if total == 0 {
+		return 0
+	}
+	return sum / total
 }
 
 func normalize(str string) string {
@@ -99,7 +121,6 @@ func loadFileNames(path string) {
 	var currentFileName string
 	//if the cache is not loaded in and exists saved
 	if normalizedCache == nil && hasCacheOnDisk() {
-		fmt.Println("Loading cache from disk")
 		cache, err := loadCache()
 		if err == nil {
 			normalizedCache = cache
@@ -107,20 +128,22 @@ func loadFileNames(path string) {
 		}
 	}
 	files, _ := os.ReadDir(path)
+	//cache buffer is just the expected max number of files; minimizes resizing/rehashing overhead
+	normalizedCache = make(map[string]SongData, cacheBuffer)
 
 	for _, file := range files {
 		currentFileName = file.Name()
 		//cache result, if not cached already
 		if _, cacheHit := normalizedCache[currentFileName]; !cacheHit {
-			fmt.Println("making cache")
-			normalizedCache[currentFileName] = getNormalizedSongData(audioPath + "/" + currentFileName)
-			fmt.Println(normalizedCache)
+			normalizedCache[currentFileName] = getNormalizedSongData(mediaDir + "/" + currentFileName)
 		}
 	}
+	dumpCache()
 }
 
-func DumpCache() error {
-	f, _ := os.Create(audioPath + normalizedCacheStore)
+func dumpCache() error {
+	os.MkdirAll(cacheDir, 0755)
+	f, _ := os.Create(cacheDir + "/" + normalizedCacheStore)
 	defer f.Close()
 	fmt.Println("Dumping Cache")
 	enc := gob.NewEncoder(f)
@@ -128,7 +151,7 @@ func DumpCache() error {
 }
 
 func loadCache() (map[string]SongData, error) {
-	file, err := os.Open(audioPath + normalizedCacheStore)
+	file, err := os.Open(cacheDir + "/" + normalizedCacheStore)
 	fmt.Println("Loading cache")
 	defer file.Close()
 
@@ -139,7 +162,7 @@ func loadCache() (map[string]SongData, error) {
 }
 
 func hasCacheOnDisk() bool {
-	_, err := os.Stat(audioPath + normalizedCacheStore)
+	_, err := os.Stat(cacheDir + "/" + normalizedCacheStore)
 	return err == nil
 }
 

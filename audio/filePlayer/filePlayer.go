@@ -28,6 +28,8 @@ func (player *FilePlayer) QueueSong(song string) {
 const delayBetweenSongs = 1 * time.Second
 
 var audioPath = "./audio/filePlayer/files"
+var mediaDir string
+var cacheDir string
 
 func (player *FilePlayer) TogglePauseResume() {
 	//if not on a voice channel, prevent action
@@ -65,6 +67,8 @@ func (player *FilePlayer) SetSession(session *discordgo.Session) {
 func (player *FilePlayer) SetInteraction(i *discordgo.InteractionCreate) {
 	if player.interaction == nil {
 		audioPath = audioPath + "/" + i.GuildID
+		mediaDir = audioPath + "/media"
+		cacheDir = audioPath + "/cache"
 	}
 	player.interaction = i
 }
@@ -134,7 +138,6 @@ func (player *FilePlayer) Play(song string) {
 }
 
 func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
-	fmt.Println(audioPath)
 	return saveAttachment(file)
 }
 

@@ -132,7 +132,7 @@ func (player *FilePlayer) startFFMPEG() (*exec.Cmd, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
-		"-i", audioPath+"/"+player.CurrentSong(),
+		"-i", mediaDir+"/"+player.CurrentSong(),
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
 		"-loglevel", "quiet",
 		"-ar", strconv.Itoa(sampleRate),

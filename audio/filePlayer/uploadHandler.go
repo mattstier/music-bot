@@ -28,8 +28,8 @@ func saveAttachment(file *discordgo.MessageAttachment) error {
 		return errors.New("Unsupported file format")
 	}
 	//make file folder if does not exist already
-	os.MkdirAll(audioPath, 0755)
-	return os.WriteFile(audioPath+"/"+file.Filename, data, 0644)
+	os.MkdirAll(mediaDir, 0755)
+	return os.WriteFile(mediaDir+"/"+file.Filename, data, 0644)
 
 }
 
