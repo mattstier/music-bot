@@ -128,6 +128,7 @@ func bytesToInt16(buf []byte) []int16 {
 }
 
 func (player *FilePlayer) startFFMPEG() (*exec.Cmd, context.CancelFunc) {
+	fmt.Println(audioPath)
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),

@@ -134,6 +134,7 @@ func (player *FilePlayer) Play(song string) {
 }
 
 func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
+	fmt.Println(audioPath)
 	return saveAttachment(file)
 }
 

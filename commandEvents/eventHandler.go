@@ -45,6 +45,7 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			manager = &PlayerManager{filePlayer.InitFilePlayer()}
 		}
 	}
+	manager.player.SetInteraction(i)
 
 	//select which event to handle
 	switch event.Name {
@@ -106,8 +107,6 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	manager.player.SetSession(s)
 	manager.player.SetConnection(vc)
-	manager.player.SetInteraction(i)
-
 	manager.player.QueueSong(result)
 
 	//only autoplay when otherwise not playing and there are songs to play
@@ -134,7 +133,6 @@ func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordg
 }
 
 func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
-	manager.player.SetInteraction(i)
 	attachmentID := i.ApplicationCommandData().Options[0].Value.(string)
 	attachment := i.ApplicationCommandData().Resolved.Attachments[attachmentID]
 	fmt.Println(attachment.Filename)

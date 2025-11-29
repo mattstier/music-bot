@@ -6,7 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const GUILD_ID = "651479202368978976"
+const GUILD_ID = "771489027740139531"
 
 var PlayCommand = &discordgo.ApplicationCommand{
 	Name:        "play",
