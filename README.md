@@ -2,6 +2,17 @@
 A lightweight Discord music bot written in Go.
 
 ---
+## Table of contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Setup Manual](#setup-manual)
+    - [Development tools](#development-tools)
+    - [How to deploy](#how-to-deploy)
+- [Contribution guidelines](#contribution-guidelines)
+- [License](#license)
+---
 ## Overview
 
 - 🎵 **Song searching** 
@@ -12,11 +23,11 @@ The bot follows a clean separation of concerns and is designed for long-term mai
 
 ---
 
-## Achitecture
+## Architecture
 
 This bot was built to cater to the following quality attributes
 
-### 🎧 For Users
+### For Users
 - **Performance**
     - Realized by the extensive use of features in Go's concurrency model (channels, goroutines)
     - Caching for searching (In-memory and disk cache)
@@ -26,7 +37,7 @@ This bot was built to cater to the following quality attributes
     - Clear immediate feedback - using Discord's _**message embeds**_ .
     - Automatic handling of voice join/leave, search fallback, and notifications about invalid inputs.
 
-### 🛠 For Developers
+### For Developers
 - **Modularity**
     - Code organized using Go’s clean multi-package structure.
 
@@ -39,7 +50,7 @@ This bot was built to cater to the following quality attributes
     - Lightweight memory footprint aiding stable deployment
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 - **audio** - different audio services 
   - **filePlayer**
@@ -57,6 +68,22 @@ This bot was built to cater to the following quality attributes
 - **docs** - detailed documentations of each major component
   - **filePlayer** - filePlayer specific documentation
   - **images** - diagrams and more
+---
+## Setup Manual
+
+### Development tools
+- install Go v1.25 or later
+- install Docker
+- build a docker image running `docker build . -t music-bot:latest`
+- (Optional) install Air a hot-loading tool for Go
+  - Install it as a standalone tool by running `go install github.com/cosmtrek/air@latest`
+  - Run the image by mounting the docker container to your local repository
+    - On _Windows Powershell_: `docker run --rm -it -v ${PWD}:/go/src/app music-bot:latest`
+    - On _Linux/MacOS_: `docker run --rm -it -v $(pwd):/go/src/app music-bot:latest`
+- Or run it by simply running `docker run music-bot:latest`
+
+### How to deploy
+
 ---
 ## Contribution guidelines
 If you intend on contributing to our project, read our Development Guideline.
