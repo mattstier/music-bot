@@ -15,11 +15,13 @@ A lightweight Discord music bot written in Go.
 ---
 ## Overview
 
-- 🎵 **Song searching** 
-- 📡 **Audio streaming to Discord voice channels**
-- 🧩 **Modular architecture** 
+- 🔎 **Search songs**
+- 📻 **Stream audio to Discord voice channels**
+- 📲 **Pause, skip and queue songs easily**
+- ☁️ ️**Upload files to stream from anywhere**
+- ⚡ **Blazing fast speed** 
+- 🧩 **Modular architecture**
 
-The bot follows a clean separation of concerns and is designed for long-term maintainability.
 
 ---
 
@@ -80,15 +82,15 @@ This bot was built to cater to the following quality attributes
   - Run the image by mounting the docker container to your local repository
     - On _Windows Powershell_: `docker run --rm -it -v ${PWD}:/go/src/app music-bot:latest`
     - On _Linux/MacOS_: `docker run --rm -it -v $(pwd):/go/src/app music-bot:latest`
-- Or run it by simply running `docker run music-bot:latest`
+- Or run the container simply by running `docker run music-bot:latest`
 
 ### How to deploy
 
 ---
 ## Contribution guidelines
-If you intend on contributing to our project, read our Development Guideline.
+If you intend on contributing to this project, read the Development Guideline [here]().
 
 ---
 ## License
 
-This project is licensed under the GNU General Public License v3.0.
+This project is licensed under the [GNU General Public License v3.0](https://github.com/mattstier/music-bot/tree/main?tab=License-1-ov-file).
