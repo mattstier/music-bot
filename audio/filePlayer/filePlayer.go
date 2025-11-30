@@ -2,10 +2,10 @@ package filePlayer
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	_ "golang.org/x/text/unicode/norm"
 	_ "gopkg.in/hraban/opus.v2"
 )
 
@@ -20,7 +20,16 @@ type FilePlayer struct {
 	connection  *discordgo.VoiceConnection
 }
 
+func (player *FilePlayer) QueueSong(song string) {
+	player.songs = append(player.songs, song)
+	fmt.Println(player.songs)
+}
+
 const delayBetweenSongs = 1 * time.Second
+
+var audioPath = "./audio/filePlayer/files"
+var mediaDir string
+var cacheDir string
 
 func (player *FilePlayer) TogglePauseResume() {
 	//if not on a voice channel, prevent action
@@ -56,6 +65,11 @@ func (player *FilePlayer) SetSession(session *discordgo.Session) {
 }
 
 func (player *FilePlayer) SetInteraction(i *discordgo.InteractionCreate) {
+	if player.interaction == nil {
+		audioPath = audioPath + "/" + i.GuildID
+		mediaDir = audioPath + "/media"
+		cacheDir = audioPath + "/cache"
+	}
 	player.interaction = i
 }
 
@@ -67,10 +81,14 @@ func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
+func (player *FilePlayer) GetQueue() []string {
+	return player.songs
+}
+
 func InitFilePlayer() *FilePlayer {
 	return &FilePlayer{
 		isPlaying:   false,
-		songs:       loadFileNames(audioPath),
+		songs:       make([]string, 0),
 		currentSong: 0,
 		done:        make(chan struct{}),
 		session:     nil,
@@ -115,22 +133,15 @@ func (player *FilePlayer) Play(song string) {
 
 	vc.Speaking(true)
 	defer vc.Speaking(false)
-
 	player.streamAudio(vc)
 
 }
 
-// returns the name of the result found
-func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
-	//returning the original string => only for now
-	return query.StringValue()
+func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
+	return saveAttachment(file)
 }
 
-func loadFileNames(path string) []string {
-	files, _ := os.ReadDir(path)
-	fileNames := make([]string, len(files))
-	for num, file := range files {
-		fileNames[num] = file.Name()
-	}
-	return fileNames
+// returns the name of the result found
+func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
+	return GetClosestMatch(query.StringValue())
 }

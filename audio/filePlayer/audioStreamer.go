@@ -18,7 +18,6 @@ const frameSize = 960 * channels * 2 //960 * channels * 2 bytes
 const sampleRate = 48000
 const channels = 2 // 1 for mono; 2 for stereo
 const sendRate = 20 * time.Millisecond
-const audioPath = "./audio/filePlayer/files"
 
 func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection) {
 	//creating pipe with a ffmpeg command
@@ -129,11 +128,13 @@ func bytesToInt16(buf []byte) []int16 {
 }
 
 func (player *FilePlayer) startFFMPEG() (*exec.Cmd, context.CancelFunc) {
+	fmt.Println(audioPath)
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
-		"-i", audioPath+"/"+player.CurrentSong(),
+		"-i", mediaDir+"/"+player.CurrentSong(),
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
+		"-loglevel", "quiet",
 		"-ar", strconv.Itoa(sampleRate),
 		"-ac", strconv.Itoa(channels),
 		"-f", "s16le",

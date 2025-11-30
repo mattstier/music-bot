@@ -10,10 +10,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const PURPLE = 0xA21DB9
-const RED = 0xE02700
-const GREEN = 0x0FE000
-
 var manager *PlayerManager
 
 type PlayerManager struct {
@@ -21,12 +17,12 @@ type PlayerManager struct {
 }
 
 func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	var platform string
+	var platform any
 	event := i.ApplicationCommandData()
 
 	//find platform TODO: make into a function
 	for i := 0; i < len(event.Options); i++ {
-		current := event.Options[i].StringValue()
+		current := event.Options[i].Value
 		//TODO: find a better way to do this
 		if current == "Youtube" || current == "SoundCloud" || current == "FileUpload" {
 			platform = current
@@ -49,6 +45,7 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			manager = &PlayerManager{filePlayer.InitFilePlayer()}
 		}
 	}
+	manager.player.SetInteraction(i)
 
 	//select which event to handle
 	switch event.Name {
@@ -58,6 +55,9 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleSkipEvent(s, i)
 	case "pause":
 		manager.handlePauseEvent(s, i)
+	case "upload":
+
+		handleFileUploadEvent(s, i, manager.player.(*filePlayer.FilePlayer))
 	}
 }
 
@@ -80,16 +80,12 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       "Song \"" + result + "\" queued",
-				Description: i.Member.User.Username + " added a song to the queue",
-				Color:       PURPLE,
-			},
-		}},
-	})
+	if result != "" {
+		displaySongQueued(s, i, result)
+	} else {
+		displaySongNotFound(s, i, query.StringValue())
+		return
+	}
 
 	//joining with context, deprecated in the new version
 	//but the fork for the fix of the audio channel issue is in v26 not v29
@@ -111,12 +107,11 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	manager.player.SetSession(s)
 	manager.player.SetConnection(vc)
-	manager.player.SetInteraction(i)
+	manager.player.QueueSong(result)
 
-	if !manager.player.IsPlaying() {
+	//only autoplay when otherwise not playing and there are songs to play
+	if !manager.player.IsPlaying() && len(manager.player.GetQueue()) > 0 {
 		go manager.player.Start()
-	} else {
-		//queue result
 	}
 }
 
@@ -124,43 +119,27 @@ func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo
 	next := make(chan string)
 	go manager.player.Skip(next)
 	current := <-next
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       i.Member.User.Username + " skipped this song",
-				Description: "Playing next song: " + current,
-				Color:       RED,
-			},
-		}},
-	})
+	displaySongSkipped(s, i, current)
 }
 
 func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	user := i.Member.User.Username
-	position := manager.player.Timestamp()
-	currentSong := manager.player.CurrentSong()
+
 	action := "resumed"
 	if manager.player.IsPlaying() {
 		action = "paused"
 	}
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Embeds: []*discordgo.MessageEmbed{
-			{
-				Title:       user + " " + action + " this song",
-				Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
-				Color:       GREEN,
-			},
-		}},
-	})
+	displaySongPaused(s, i, action)
 	go manager.player.TogglePauseResume()
 }
 
-func formatTimestamp(d time.Duration) string {
-	totalSeconds := int(d.Seconds())
-	hours := totalSeconds / 3600
-	minutes := (totalSeconds % 3600) / 60
-	seconds := totalSeconds % 60
-	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+	attachmentID := i.ApplicationCommandData().Options[0].Value.(string)
+	attachment := i.ApplicationCommandData().Resolved.Attachments[attachmentID]
+	fmt.Println(attachment.Filename)
+	err := player.UploadFile(attachment)
+	if err == nil {
+		displayUpload(s, i, *attachment)
+	} else {
+		displayUploadError(s, i, *attachment, err)
+	}
 }

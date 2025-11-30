@@ -16,6 +16,8 @@ type Player interface {
 	IsPlaying() bool
 	Timestamp() time.Duration
 	FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string
+	QueueSong(song string)
+	GetQueue() []string
 
 	//misc
 	SetSession(session *discordgo.Session)
