@@ -1,7 +1,7 @@
 # Audiophile
 A lightweight Discord music bot written in Go.
 
----
+
 ## Table of contents
 
 - [Overview](#overview)
@@ -12,7 +12,7 @@ A lightweight Discord music bot written in Go.
     - [How to deploy](#how-to-deploy)
 - [Contribution guidelines](#contribution-guidelines)
 - [License](#license)
----
+
 ## Overview
 
 - 🔎 **Search songs**
@@ -22,9 +22,10 @@ A lightweight Discord music bot written in Go.
 - ⚡ **Blazing fast speed** 
 - 🧩 **Modular architecture**
 
-
----
-
+## System description
+**_Audiophile_** is a lightweight music bot for Discord written in Go. It uses [FFMPEG](https://www.ffmpeg.org/about.html) and (a fork of) [Discordgo](https://github.com/bwmarrin/discordgo) as well as other libraries mentioned below. It is ideal for smaller servers (aka Guilds) 
+where people may want to show music to each other that is not uploaded anywhere else. The system gives people the 
+opportunity to upload any audio or video file formats (supported by FFMPEG) and then search later for these songs; a service that few other music bots offer.
 ## Architecture
 
 This bot was built to cater to the following quality attributes
@@ -36,6 +37,7 @@ This bot was built to cater to the following quality attributes
 
 - **Usability**
     - Simple slash commands (`/play`, `/pause`, `/skip`, `/upload` etc.).
+    - Drag-and-drop file upload
     - Clear immediate feedback - using Discord's _**message embeds**_ .
     - Automatic handling of voice join/leave, search fallback, and notifications about invalid inputs.
 
@@ -50,7 +52,7 @@ This bot was built to cater to the following quality attributes
     - Containerized using a lightweight Docker image (Golang:alpine) with minimal dependencies.
     - Single binary deployment 
     - Lightweight memory footprint aiding stable deployment
----
+
 
 ## Project Structure
 
@@ -70,15 +72,15 @@ This bot was built to cater to the following quality attributes
 - **docs** - detailed documentations of each major component
   - **filePlayer** - filePlayer specific documentation
   - **images** - diagrams and more
----
+
 ## Setup Manual
 
 ### Development tools
-- install Go v1.25 or later
-- install Docker
-- build a docker image running `docker build . -t music-bot:latest`
-- (Optional) install Air a hot-loading tool for Go
-  - Install it as a standalone tool by running `go install github.com/cosmtrek/air@latest`
+- Install Go v1.25 or later
+- Install Docker
+- Build a Docker image running `docker build . -t music-bot:latest`
+- Then install [Air](https://github.com/air-verse/air#) a live-reloading tool for Go
+  - Install it as a standalone tool by running `go install github.com/air-verse/air@latest`
   - Run the image by mounting the docker container to your local repository
     - On _Windows Powershell_: `docker run --rm -it -v ${PWD}:/go/src/app music-bot:latest`
     - On _Linux/MacOS_: `docker run --rm -it -v $(pwd):/go/src/app music-bot:latest`
@@ -86,11 +88,10 @@ This bot was built to cater to the following quality attributes
 
 ### How to deploy
 
----
 ## Contribution guidelines
 If you intend on contributing to this project, read the Development Guideline [here]().
 
----
+
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](https://github.com/mattstier/music-bot/tree/main?tab=License-1-ov-file).
