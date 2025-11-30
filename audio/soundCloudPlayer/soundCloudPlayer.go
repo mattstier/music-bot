@@ -1,6 +1,8 @@
 package soundCloudPlayer
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,6 +16,18 @@ type SoundCloudPlayer struct {
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
 	connection  *discordgo.VoiceConnection
+}
+
+var soundCloudClientID string
+
+func InitPlayer() *SoundCloudPlayer {
+	soundCloudClientID = os.Getenv("SOUNDCLOUD_CLIENT_ID")
+	fmt.Println(soundCloudClientID)
+	return &SoundCloudPlayer{
+		isPlaying: false,
+		queue:     make([]string, 0),
+		timestamp: 0,
+	}
 }
 
 func (player *SoundCloudPlayer) Start() {
@@ -52,8 +66,7 @@ func (player *SoundCloudPlayer) Timestamp() time.Duration {
 }
 
 func (player *SoundCloudPlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
-	//TODO implement me
-	panic("implement me")
+	return getJSONResponse("something")
 }
 
 func (player *SoundCloudPlayer) QueueSong(song string) {

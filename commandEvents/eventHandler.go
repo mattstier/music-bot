@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"music-bot/audio"
 	"music-bot/audio/filePlayer"
+	"music-bot/audio/soundCloudPlayer"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -34,8 +35,9 @@ func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println("Not yet implemented...")
 		fallthrough
 	case "SoundCloud":
-		fmt.Println("Not yet implemented...")
-		fallthrough
+		if manager == nil {
+			manager = &PlayerManager{soundCloudPlayer.InitPlayer()}
+		}
 	case "FileUpload":
 		if manager == nil {
 			manager = &PlayerManager{filePlayer.InitFilePlayer()}
@@ -80,6 +82,7 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
+	fmt.Println(result)
 	if result != "" {
 		displaySongQueued(s, i, result)
 	} else {
