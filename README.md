@@ -75,6 +75,10 @@ This bot was built to cater to the following quality attributes
 
 ## Setup Manual
 
+> [!WARNING]
+> You need to have a .env file in the same directory as _"main.go"_ with your Discord token before 
+> you try building the Docker image with the field TOKEN="your-token"
+
 ### Development tools
 - Install Go v1.25 or later
 - Install Docker
@@ -89,9 +93,9 @@ This bot was built to cater to the following quality attributes
 ### How to deploy
 
 ## Contribution guidelines
-If you intend on contributing to this project, read the Development Guideline [here]().
+If you intend on contributing to this project, read the Development Guideline [here](/docs/CONTRIBUTIONS.md).
 
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0](https://github.com/mattstier/music-bot/tree/main?tab=License-1-ov-file).
+This project is licensed under the [GNU General Public License v3.0](/LICENSE.md).
