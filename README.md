@@ -15,7 +15,7 @@ A lightweight Discord music bot written in Go.
 
 ## Overview
 
-- 🔎 **Search songs**
+- 🔎 **Search songs conveniently**
 - 📻 **Stream audio to Discord voice channels**
 - 📲 **Pause, skip and queue songs easily**
 - ☁️ ️**Upload files to stream from anywhere**
@@ -98,4 +98,4 @@ If you intend on contributing to this project, read the Development Guideline [h
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0](/LICENSE.md).
+This project is licensed under the [GNU General Public License v3.0](/LICENSE).
