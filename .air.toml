@@ -7,7 +7,7 @@
   # working dir
   dir = "."
   include_ext = ["go"]
-  exclude_dir = ["vendor"]
+  exclude_dir = ["vendor", "docs", "audio/filePlayer/files"]
   # command after building
   run_after_build = "chmod +x main"
 

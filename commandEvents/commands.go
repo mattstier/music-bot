@@ -1,3 +1,11 @@
+// This source file is a part of the Discord bot 'Audiophile' made by Máté Stier
+//
+// Copyright (C) 2025 Máté Stier
+//
+// This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
+// which should be included with this package. The terms are also available at
+// http://www.gnu.org/licenses/gpl-3.0.html
+
 package commandEvents
 
 import (
