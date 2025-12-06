@@ -10,14 +10,12 @@ package commandEvents
 
 import (
 	"fmt"
+	"music-bot/components"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	_ "music-bot/components"
 )
-
-const PURPLE = 0xA21DB9
-const RED = 0xE02700
-const GREEN = 0x0FE000
 
 func sendEmbed(embeds []*discordgo.MessageEmbed, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -32,15 +30,24 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 	embed := &discordgo.MessageEmbed{
 		Title:       "Song \"" + song + "\" queued",
 		Description: i.Member.User.Username + " added a song to the queue",
-		Color:       PURPLE,
+		Color:       components.PURPLE,
 	}
-	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
+	s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+		Embed: embed,
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					components.CancelButton,
+				},
+			},
+		},
+	})
 }
 func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Song not found",
 		Description: fmt.Sprintf("No results for the term %q", song),
-		Color:       RED,
+		Color:       components.RED,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
@@ -48,7 +55,7 @@ func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, cu
 	embed := &discordgo.MessageEmbed{
 		Title:       i.Member.User.Username + " skipped this song",
 		Description: "Playing next song: " + current,
-		Color:       RED,
+		Color:       components.RED,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
@@ -57,7 +64,7 @@ func displayUpload(s *discordgo.Session, i *discordgo.InteractionCreate, attachm
 	embed := &discordgo.MessageEmbed{
 		Title:       i.Member.User.Username + " uploaded the following song:",
 		Description: "\"" + attachment.Filename + "\"",
-		Color:       PURPLE,
+		Color:       components.PURPLE,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
@@ -66,7 +73,7 @@ func displayUploadError(s *discordgo.Session, i *discordgo.InteractionCreate, at
 	embed := &discordgo.MessageEmbed{
 		Title:       "Failed to upload file",
 		Description: fmt.Sprintf("File: %v \nError: %v", attachment.Filename, err),
-		Color:       RED,
+		Color:       components.RED,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
@@ -78,7 +85,7 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate, act
 	embed := &discordgo.MessageEmbed{
 		Title:       user + " " + action + " this song",
 		Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
-		Color:       GREEN,
+		Color:       components.GREEN,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }

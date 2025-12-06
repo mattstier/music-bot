@@ -24,7 +24,27 @@ type PlayerManager struct {
 	player audio.Player
 }
 
-func EventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	//filters the interactions to button press events only
+	if i.Type != discordgo.InteractionMessageComponent {
+		return
+	}
+	button := i.MessageComponentData().CustomID
+	switch button {
+	case "button_cancel":
+		manager.handleCancelEvent(s, i)
+	case "button_skip":
+		manager.handleSkipEvent(s, i)
+	case "button_pause":
+		manager.handlePauseEvent(s, i)
+	}
+}
+
+func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	//filters the interaction for slash command events only
+	if i.Type != discordgo.InteractionApplicationCommand {
+		return
+	}
 	var platform any
 	event := i.ApplicationCommandData()
 
@@ -149,5 +169,12 @@ func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate,
 		displayUpload(s, i, *attachment)
 	} else {
 		displayUploadError(s, i, *attachment, err)
+	}
+}
+
+func (manager *PlayerManager) handleCancelEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if manager.player != nil {
+		//manager.player.RemoveLastQueued()
+		fmt.Println("Cancelling queueing")
 	}
 }
