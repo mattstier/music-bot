@@ -109,7 +109,11 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
 	if result != "" {
-		displaySongQueued(s, i, result)
+		queue := manager.player.GetQueue()
+		//only display that its queued if it cannot be immediately played
+		if queue != nil && len(queue) > 0 {
+			displaySongQueued(s, i, result)
+		}
 	} else {
 		displaySongNotFound(s, i, query.StringValue())
 		return
@@ -156,7 +160,9 @@ func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordg
 	if manager.player.IsPlaying() {
 		action = "paused"
 	}
-	displaySongPaused(s, i, action)
+	if action == "paused" {
+		displaySongPaused(s, i)
+	}
 	go manager.player.TogglePauseResume()
 }
 

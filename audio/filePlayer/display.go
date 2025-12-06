@@ -28,8 +28,8 @@ func (player *FilePlayer) displayCurrentSong() {
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
-					components.SkipButton,
 					components.PauseButton,
+					components.SkipButton,
 				},
 			},
 		},

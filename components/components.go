@@ -5,6 +5,7 @@ import "github.com/bwmarrin/discordgo"
 const PURPLE = 0xA21DB9
 const RED = 0xE02700
 const GREEN = 0x0FE000
+const BLUE = 0x003FBE
 
 var CancelButton = discordgo.Button{
 	Label:    "Cancel",
@@ -20,12 +21,12 @@ var SkipButton = discordgo.Button{
 
 var PauseButton = discordgo.Button{
 	Label:    "Pause",
-	Style:    discordgo.PremiumButton,
+	Style:    discordgo.SecondaryButton,
 	CustomID: "button_pause",
 }
 
 var ResumeButton = discordgo.Button{
 	Label:    "Resume",
-	Style:    discordgo.PremiumButton,
+	Style:    discordgo.SuccessButton,
 	CustomID: "button_pause",
 }

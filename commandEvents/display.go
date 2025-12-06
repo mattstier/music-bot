@@ -17,6 +17,21 @@ import (
 	_ "music-bot/components"
 )
 
+func sendComplex(embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent, s *discordgo.Session, i *discordgo.InteractionCreate) {
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: embeds,
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: components,
+				},
+			},
+		},
+	})
+	fmt.Println(err)
+}
+
 func sendEmbed(embeds []*discordgo.MessageEmbed, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -32,16 +47,10 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 		Description: i.Member.User.Username + " added a song to the queue",
 		Color:       components.PURPLE,
 	}
-	s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
-		Embed: embed,
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					components.CancelButton,
-				},
-			},
-		},
-	})
+	sendComplex(
+		[]*discordgo.MessageEmbed{embed},
+		[]discordgo.MessageComponent{components.CancelButton},
+		s, i)
 }
 func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
 	embed := &discordgo.MessageEmbed{
@@ -64,7 +73,7 @@ func displayUpload(s *discordgo.Session, i *discordgo.InteractionCreate, attachm
 	embed := &discordgo.MessageEmbed{
 		Title:       i.Member.User.Username + " uploaded the following song:",
 		Description: "\"" + attachment.Filename + "\"",
-		Color:       components.PURPLE,
+		Color:       components.BLUE,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
@@ -78,16 +87,19 @@ func displayUploadError(s *discordgo.Session, i *discordgo.InteractionCreate, at
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
 
-func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate, action string) {
+func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
 	position := manager.player.Timestamp()
 	currentSong := manager.player.CurrentSong()
 	embed := &discordgo.MessageEmbed{
-		Title:       user + " " + action + " this song",
+		Title:       user + " paused this song",
 		Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
 		Color:       components.GREEN,
 	}
-	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
+	sendComplex(
+		[]*discordgo.MessageEmbed{embed},
+		[]discordgo.MessageComponent{components.ResumeButton},
+		s, i)
 }
 
 func formatTimestamp(d time.Duration) string {
