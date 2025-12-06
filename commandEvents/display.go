@@ -52,6 +52,7 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 		[]discordgo.MessageComponent{components.CancelButton, components.ListQueueButton},
 		s, i)
 }
+
 func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Song not found",

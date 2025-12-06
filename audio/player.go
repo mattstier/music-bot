@@ -18,6 +18,7 @@ type Player interface {
 	FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string
 	QueueSong(song string)
 	GetQueue() []string
+	RemoveLastQueued()
 
 	//misc
 	SetSession(session *discordgo.Session)

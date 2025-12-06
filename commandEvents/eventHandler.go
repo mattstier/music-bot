@@ -185,9 +185,15 @@ func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate,
 
 func (manager *PlayerManager) handleCancelEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if manager.player != nil {
-		//manager.player.RemoveLastQueued()
+		manager.player.RemoveLastQueued()
 		fmt.Println("Cancelling queueing")
 	}
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
+
+	//deleting message after hitting the cancel button
+	s.ChannelMessageDelete(i.ChannelID, i.Message.ID)
 }
 
 func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {

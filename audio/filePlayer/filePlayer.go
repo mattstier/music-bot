@@ -153,3 +153,11 @@ func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
 func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
 	return GetClosestMatch(query.StringValue())
 }
+
+func (player *FilePlayer) RemoveLastQueued() {
+	queue := player.GetQueue()
+	l := len(queue)
+	if l > 1 {
+		player.songs = player.songs[:l-1]
+	}
+}
