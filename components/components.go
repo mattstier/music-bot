@@ -30,3 +30,9 @@ var ResumeButton = discordgo.Button{
 	Style:    discordgo.SuccessButton,
 	CustomID: "button_pause",
 }
+
+var ListQueueButton = discordgo.Button{
+	Label:    "Show queue",
+	Style:    discordgo.SecondaryButton,
+	CustomID: "button_list_queue",
+}

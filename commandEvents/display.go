@@ -49,7 +49,7 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 	}
 	sendComplex(
 		[]*discordgo.MessageEmbed{embed},
-		[]discordgo.MessageComponent{components.CancelButton},
+		[]discordgo.MessageComponent{components.CancelButton, components.ListQueueButton},
 		s, i)
 }
 func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
@@ -108,4 +108,19 @@ func formatTimestamp(d time.Duration) string {
 	minutes := (totalSeconds % 3600) / 60
 	seconds := totalSeconds % 60
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+}
+
+func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	list := ""
+	queue := manager.player.GetQueue() //TODO: move this to the parameter once implemented a custom Queue type
+	for j := 0; j < len(queue); j++ {
+		list += fmt.Sprintf("%d. %s\n", j+1, queue[j])
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "Queued songs",
+		Description: list,
+		Color:       components.PURPLE,
+	}
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }

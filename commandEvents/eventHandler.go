@@ -37,6 +37,8 @@ func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleSkipEvent(s, i)
 	case "button_pause":
 		manager.handlePauseEvent(s, i)
+	case "button_list_queue":
+		manager.handleListQueueEvent(s, i)
 	}
 }
 
@@ -86,6 +88,9 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	case "upload":
 
 		handleFileUploadEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+	case "list":
+
+		manager.handleListQueueEvent(s, i)
 	}
 }
 
@@ -182,5 +187,11 @@ func (manager *PlayerManager) handleCancelEvent(s *discordgo.Session, i *discord
 	if manager.player != nil {
 		//manager.player.RemoveLastQueued()
 		fmt.Println("Cancelling queueing")
+	}
+}
+
+func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if manager.player != nil {
+		displayQueue(s, i)
 	}
 }
