@@ -91,6 +91,8 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	case "list":
 
 		manager.handleListQueueEvent(s, i)
+	case "quit":
+		manager.handleQuitEvent(s, i)
 	}
 }
 
@@ -199,5 +201,12 @@ func (manager *PlayerManager) handleCancelEvent(s *discordgo.Session, i *discord
 func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if manager.player != nil {
 		displayQueue(s, i)
+	}
+}
+
+func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if manager.player != nil {
+		displayQuit(s, i)
+		manager.player.LeaveVoiceChannel()
 	}
 }

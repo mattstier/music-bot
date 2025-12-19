@@ -13,8 +13,9 @@ import (
 	"music-bot/components"
 	"time"
 
-	"github.com/bwmarrin/discordgo"
 	_ "music-bot/components"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 func sendComplex(embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent, s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -84,6 +85,15 @@ func displayUploadError(s *discordgo.Session, i *discordgo.InteractionCreate, at
 		Title:       "Failed to upload file",
 		Description: fmt.Sprintf("File: %v \nError: %v", attachment.Filename, err),
 		Color:       components.RED,
+	}
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
+}
+
+func displayQuit(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Quit voice channel",
+		Description: "See you next time!",
+		Color:       components.PURPLE,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }

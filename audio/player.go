@@ -24,4 +24,5 @@ type Player interface {
 	SetSession(session *discordgo.Session)
 	SetInteraction(i *discordgo.InteractionCreate)
 	SetConnection(vc *discordgo.VoiceConnection)
+	LeaveVoiceChannel()
 }

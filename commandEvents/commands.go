@@ -65,6 +65,11 @@ var ListCommand = &discordgo.ApplicationCommand{
 	Description: "Lists all queued songs",
 }
 
+var QuitCommand = &discordgo.ApplicationCommand{
+	Name:        "quit",
+	Description: "Make the bot leave the voice channel",
+}
+
 var UploadFileCommand = &discordgo.ApplicationCommand{
 	Name:        "upload",
 	Description: "Upload an audio file that you can play later.",
@@ -85,6 +90,7 @@ func RegisterCommands(session *discordgo.Session) {
 		SkipCommand,
 		UploadFileCommand,
 		ListCommand,
+		QuitCommand,
 	}
 	for _, command := range commands {
 		_, err := session.ApplicationCommandCreate(session.State.User.ID, GUILD_ID, command)

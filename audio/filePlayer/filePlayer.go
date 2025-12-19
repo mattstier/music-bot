@@ -161,3 +161,9 @@ func (player *FilePlayer) RemoveLastQueued() {
 		player.songs = player.songs[:l-1]
 	}
 }
+
+func (player *FilePlayer) LeaveVoiceChannel() {
+	player.done <- struct{}{}
+	player.connection.Speaking(false)
+	player.session.Close()
+}
