@@ -10,6 +10,7 @@ package filePlayer
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -166,4 +167,17 @@ func (player *FilePlayer) LeaveVoiceChannel() {
 	player.done <- struct{}{}
 	player.connection.Speaking(false)
 	player.session.Close()
+}
+
+func (player *FilePlayer) GetUploadedSongs() []string {
+	return player.loadFileNames(mediaDir)
+}
+
+func (player *FilePlayer) loadFileNames(path string) []string {
+	files, _ := os.ReadDir(path)
+	fileNames := make([]string, len(files))
+	for num, file := range files {
+		fileNames[num] = file.Name()
+	}
+	return fileNames
 }

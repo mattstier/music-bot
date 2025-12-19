@@ -89,8 +89,9 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		handleFileUploadEvent(s, i, manager.player.(*filePlayer.FilePlayer))
 	case "list":
-
 		manager.handleListQueueEvent(s, i)
+	case "uploaded":
+		handleListUploadedEvent(s, i, manager.player.(*filePlayer.FilePlayer))
 	case "quit":
 		manager.handleQuitEvent(s, i)
 	}
@@ -204,6 +205,11 @@ func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *disc
 	}
 }
 
+func handleListUploadedEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+	if manager.player != nil {
+		displayUploadedSongs(s, i, player)
+	}
+}
 func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if manager.player != nil {
 		displayQuit(s, i)

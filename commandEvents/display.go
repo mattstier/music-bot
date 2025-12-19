@@ -10,6 +10,7 @@ package commandEvents
 
 import (
 	"fmt"
+	"music-bot/audio/filePlayer"
 	"music-bot/components"
 	"time"
 
@@ -134,4 +135,28 @@ func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Color:       components.PURPLE,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
+}
+
+func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+	songs := player.GetUploadedSongs()
+	var embed discordgo.MessageEmbed
+	if len(songs) > 0 {
+		list := ""
+		for j := 0; j < len(songs); j++ {
+			list += fmt.Sprintf("%d. %s \n", j+1, songs[j])
+		}
+
+		embed = discordgo.MessageEmbed{
+			Title:       "Uploaded songs available",
+			Description: list,
+			Color:       components.PURPLE,
+		}
+	} else {
+		embed = discordgo.MessageEmbed{
+			Title:       "There are no songs available",
+			Description: "Upload a song by writing '/upload'",
+			Color:       components.PURPLE,
+		}
+	}
+	sendEmbed([]*discordgo.MessageEmbed{&embed}, s, i)
 }
