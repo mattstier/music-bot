@@ -171,6 +171,9 @@ func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordg
 	if action == "paused" {
 		displaySongPaused(s, i)
 	}
+
+	//deleting the previous message about it being paused or resumed
+	s.ChannelMessageDelete(i.ChannelID, i.Message.ID)
 	go manager.player.TogglePauseResume()
 }
 

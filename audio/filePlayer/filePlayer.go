@@ -54,6 +54,10 @@ func (player *FilePlayer) TogglePauseResume() {
 		//play the song again (looks at player timestamp)
 		fmt.Println(fmt.Sprintf("Resuming song from %v seconds", player.timestamp.Seconds()))
 		go player.Play(player.CurrentSong())
+		
+		//TODO: refactor this to not scatter displaying logic
+		//display current song again, when resuming
+		player.displayCurrentSong()
 	}
 }
 
