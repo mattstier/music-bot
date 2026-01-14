@@ -146,11 +146,13 @@ func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer, showAll bool) {
 	songs := player.GetUploadedSongs()
 	songsToDisplay := len(songs)
+	button := components.CollapseListButton
 	var embed discordgo.MessageEmbed
 	if songsToDisplay > 0 {
 		list := ""
 		if songsToDisplay >= DisplayListLimit && !showAll {
 			songsToDisplay = DisplayListLimit
+			button = components.ExpandListButton
 		}
 		for j := 0; j < songsToDisplay; j++ {
 			list += fmt.Sprintf("%d. %s \n", j+1, songs[j])
@@ -170,6 +172,6 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 	}
 	sendComplex(
 		[]*discordgo.MessageEmbed{&embed},
-		[]discordgo.MessageComponent{components.ExpandListButton},
+		[]discordgo.MessageComponent{button},
 		s, i)
 }

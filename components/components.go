@@ -42,3 +42,9 @@ var ExpandListButton = discordgo.Button{
 	Style:    discordgo.SecondaryButton,
 	CustomID: "expand_list",
 }
+
+var CollapseListButton = discordgo.Button{
+	Label:    "Collapse list",
+	Style:    discordgo.SecondaryButton,
+	CustomID: "collapse_list",
+}

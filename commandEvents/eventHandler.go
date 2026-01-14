@@ -41,7 +41,9 @@ func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	case "button_list_queue":
 		manager.handleListQueueEvent(s, i)
 	case "expand_list":
-		handleExpandUploadedList(s, i, manager.player.(*filePlayer.FilePlayer))
+		handleExpandUploadedListEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+	case "collapse_list":
+		handleListUploadedEvent(s, i, manager.player.(*filePlayer.FilePlayer))
 	}
 }
 
@@ -210,7 +212,9 @@ func (manager *PlayerManager) handleCancelEvent(s *discordgo.Session, i *discord
 	})
 
 	//deleting message after hitting the cancel button
-	s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+	if manager.previousMessage != nil {
+		s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+	}
 	manager.previousMessage = i.Message
 }
 
@@ -221,8 +225,11 @@ func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *disc
 	}
 }
 
-func handleExpandUploadedList(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+func handleExpandUploadedListEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
 	if manager.player != nil {
+		if manager.previousMessage != nil {
+			s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+		}
 		displayUploadedSongs(s, i, player, true)
 		manager.previousMessage = i.Message
 	}
@@ -230,9 +237,15 @@ func handleExpandUploadedList(s *discordgo.Session, i *discordgo.InteractionCrea
 
 func handleListUploadedEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
 	if manager.player != nil {
+		//deleting previous message
+		if manager.previousMessage != nil {
+			s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+		}
 		displayUploadedSongs(s, i, player, false)
+		manager.previousMessage = i.Message
 	}
 }
+
 func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if manager.player != nil {
 		displayQuit(s, i)
