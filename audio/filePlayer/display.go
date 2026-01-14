@@ -8,16 +8,30 @@
 
 package filePlayer
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"music-bot/components"
+	_ "music-bot/components"
 
-const PURPLE = 0xA21DB9
+	"github.com/bwmarrin/discordgo"
+)
 
 func (player *FilePlayer) displayCurrentSong() {
+	s := player.session
+	i := player.interaction
 	embed := &discordgo.MessageEmbed{
 		Title:       "Playing Song:",
 		Description: "\"" + player.CurrentSong() + "\"",
-		Color:       PURPLE,
+		Color:       components.PURPLE,
 	}
-	//show song to be played
-	player.session.ChannelMessageSendEmbed(player.interaction.ChannelID, embed)
+	s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+		Embed: embed,
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					components.PauseButton,
+					components.SkipButton,
+				},
+			},
+		},
+	})
 }
