@@ -1,8 +1,11 @@
-package audio
+package types
 
 type Queue interface {
-	Enqueue() Song
+	Enqueue(Song)
 	Dequeue() Song
+	DequeueLastAdded() Song
 	Peek() Song
+	PeekLastAdded() Song
 	Length() int
+	Find(string) (Song, bool)
 }

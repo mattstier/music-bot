@@ -1,4 +1,4 @@
-package audio
+package types
 
 import (
 	"time"
@@ -13,12 +13,12 @@ type Player interface {
 	TogglePauseResume()
 	Skip(next chan string)
 	CurrentSong() string
-	CurrentSongLength() (time.Duration, error)
+	SongLength(name string) (time.Duration, error)
 	IsPlaying() bool
 	Timestamp() time.Duration
 	FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string
 	QueueSong(song string)
-	GetQueue() []string
+	GetQueue() []Song
 	RemoveLastQueued()
 
 	//misc

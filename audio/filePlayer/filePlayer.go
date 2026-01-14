@@ -10,6 +10,7 @@ package filePlayer
 
 import (
 	"fmt"
+	"music-bot/audio/types"
 	"os"
 	"os/exec"
 	"strconv"
@@ -23,7 +24,7 @@ import (
 
 type FilePlayer struct {
 	isPlaying   bool
-	songs       []string
+	songs       Queue
 	timestamp   time.Duration
 	currentSong int
 	done        chan struct{}
@@ -33,7 +34,8 @@ type FilePlayer struct {
 }
 
 func (player *FilePlayer) QueueSong(song string) {
-	player.songs = append(player.songs, song)
+	songDuration, _ := player.SongLength(song)
+	player.songs.Enqueue(Song{name: song, duration: songDuration})
 	fmt.Println(player.songs)
 }
 
@@ -65,11 +67,11 @@ func (player *FilePlayer) TogglePauseResume() {
 }
 
 func (player *FilePlayer) CurrentSong() string {
-
-	if player.songs != nil && len(player.songs) > 0 && player.currentSong < len(player.songs) {
-		return player.songs[player.currentSong]
+	current := player.songs.Peek()
+	if current == nil {
+		return ""
 	}
-	return "Couldn't find next song"
+	return current.(Song).name
 }
 
 func (player *FilePlayer) Timestamp() time.Duration {
@@ -97,14 +99,14 @@ func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
-func (player *FilePlayer) GetQueue() []string {
-	return player.songs
+func (player *FilePlayer) GetQueue() []types.Song {
+	return player.songs.baseArray
 }
 
 func InitFilePlayer() *FilePlayer {
 	return &FilePlayer{
 		isPlaying:   false,
-		songs:       make([]string, 0),
+		songs:       *NewQueue(),
 		currentSong: 0,
 		done:        make(chan struct{}),
 		session:     nil,
@@ -115,7 +117,7 @@ func InitFilePlayer() *FilePlayer {
 
 func (player *FilePlayer) Start() {
 
-	for i := 0; i < len(player.songs); i++ {
+	for player.songs.Length() > 0 {
 		go player.displayCurrentSong()
 		current := player.CurrentSong()
 		fmt.Println("Current: ", current)
@@ -163,11 +165,7 @@ func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractio
 }
 
 func (player *FilePlayer) RemoveLastQueued() {
-	queue := player.GetQueue()
-	l := len(queue)
-	if l > 1 {
-		player.songs = player.songs[:l-1]
-	}
+	player.songs.DequeueLastAdded()
 }
 
 func (player *FilePlayer) LeaveVoiceChannel() {
@@ -189,12 +187,12 @@ func (player *FilePlayer) loadFileNames(path string) []string {
 	return fileNames
 }
 
-func (player *FilePlayer) CurrentSongLength() (time.Duration, error) {
+func (player *FilePlayer) SongLength(name string) (time.Duration, error) {
 	out, _ := exec.Command("ffprobe",
 		"-v", "error",
 		"-show_entries", "format=duration",
 		"-of", "default=noprint_wrappers=1:nokey=1",
-		mediaDir+"/"+player.CurrentSong()).Output()
+		mediaDir+"/"+name).Output()
 
 	f, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
 
