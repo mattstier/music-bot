@@ -11,8 +11,8 @@ package commandEvents
 import (
 	"context"
 	"fmt"
-	"music-bot/audio"
 	"music-bot/audio/filePlayer"
+	"music-bot/audio/types"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -21,7 +21,7 @@ import (
 var manager *PlayerManager
 
 type PlayerManager struct {
-	player          audio.Player
+	player          types.Player
 	previousMessage *discordgo.Message
 }
 
