@@ -10,6 +10,7 @@ package commandEvents
 
 import (
 	"fmt"
+	"math"
 	"music-bot/audio/filePlayer"
 	"music-bot/components"
 	"time"
@@ -20,30 +21,7 @@ import (
 )
 
 const DisplayListLimit = 5
-
-func sendComplex(embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: embeds,
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: components,
-				},
-			},
-		},
-	})
-	fmt.Println(err)
-}
-
-func sendEmbed(embeds []*discordgo.MessageEmbed, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: embeds,
-		},
-	})
-}
+const ProgressBarLength = 10
 
 func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
 	embed := &discordgo.MessageEmbed{
@@ -51,7 +29,7 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 		Description: i.Member.User.Username + " added a song to the queue",
 		Color:       components.PURPLE,
 	}
-	sendComplex(
+	sendComplexReply(
 		[]*discordgo.MessageEmbed{embed},
 		[]discordgo.MessageComponent{components.CancelButton, components.ListQueueButton},
 		s, i)
@@ -105,12 +83,15 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
 	position := manager.player.Timestamp()
 	currentSong := manager.player.CurrentSong()
+	currentSongLength, _ := manager.player.CurrentSongLength()
+	fmt.Println("Current length: " + currentSongLength.String())
+	progressBar := generateLoadingBar(position, currentSongLength, ProgressBarLength)
 	embed := &discordgo.MessageEmbed{
 		Title:       user + " paused this song",
-		Description: fmt.Sprintf("\"%v\" (%v)", currentSong, formatTimestamp(position)),
+		Description: fmt.Sprintf("%s (%s) \n%s", currentSong, formatTimestamp(position), progressBar),
 		Color:       components.GREEN,
 	}
-	sendComplex(
+	updateComplexReply(
 		[]*discordgo.MessageEmbed{embed},
 		[]discordgo.MessageComponent{components.ResumeButton},
 		s, i)
@@ -170,8 +151,32 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 			Color:       components.PURPLE,
 		}
 	}
-	sendComplex(
-		[]*discordgo.MessageEmbed{&embed},
-		[]discordgo.MessageComponent{button},
-		s, i)
+	// edit message when expanding, send a new one when collapsing/sending it for the first time
+	// this assumes the first message is always the unexpanded one
+	if showAll {
+		updateComplexReply(
+			[]*discordgo.MessageEmbed{&embed},
+			[]discordgo.MessageComponent{button},
+			s, i)
+	} else {
+		sendComplexReply(
+			[]*discordgo.MessageEmbed{&embed},
+			[]discordgo.MessageComponent{button},
+			s, i)
+	}
+}
+
+func generateLoadingBar(timestamp time.Duration, songLength time.Duration, size int) string {
+	loadingBar := ""
+	conversionRatio := float64(timestamp.Milliseconds()) / float64(songLength.Milliseconds())
+	loaded := int(math.Ceil(float64(size) * conversionRatio))
+
+	for i := 0; i < size; i++ {
+		if i <= loaded {
+			loadingBar += "▓"
+		} else {
+			loadingBar += "░"
+		}
+	}
+	return loadingBar
 }

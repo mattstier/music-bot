@@ -227,22 +227,14 @@ func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *disc
 
 func handleExpandUploadedListEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
 	if manager.player != nil {
-		if manager.previousMessage != nil {
-			s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
-		}
 		displayUploadedSongs(s, i, player, true)
-		manager.previousMessage = i.Message
 	}
 }
 
 func handleListUploadedEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
 	if manager.player != nil {
 		//deleting previous message
-		if manager.previousMessage != nil {
-			s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
-		}
 		displayUploadedSongs(s, i, player, false)
-		manager.previousMessage = i.Message
 	}
 }
 

@@ -11,6 +11,9 @@ package filePlayer
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -54,7 +57,7 @@ func (player *FilePlayer) TogglePauseResume() {
 		//play the song again (looks at player timestamp)
 		fmt.Println(fmt.Sprintf("Resuming song from %v seconds", player.timestamp.Seconds()))
 		go player.Play(player.CurrentSong())
-		
+
 		//TODO: refactor this to not scatter displaying logic
 		//display current song again, when resuming
 		player.displayCurrentSong()
@@ -184,4 +187,18 @@ func (player *FilePlayer) loadFileNames(path string) []string {
 		fileNames[num] = file.Name()
 	}
 	return fileNames
+}
+
+func (player *FilePlayer) CurrentSongLength() (time.Duration, error) {
+	out, _ := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		mediaDir+"/"+player.CurrentSong()).Output()
+
+	f, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
+
+	// Convert float to time.Duration
+	duration := time.Duration(f * float64(time.Second))
+	return duration, nil
 }

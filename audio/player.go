@@ -13,6 +13,7 @@ type Player interface {
 	TogglePauseResume()
 	Skip(next chan string)
 	CurrentSong() string
+	CurrentSongLength() (time.Duration, error)
 	IsPlaying() bool
 	Timestamp() time.Duration
 	FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string
