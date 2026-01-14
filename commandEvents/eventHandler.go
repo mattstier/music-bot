@@ -21,7 +21,8 @@ import (
 var manager *PlayerManager
 
 type PlayerManager struct {
-	player audio.Player
+	player          audio.Player
+	previousMessage *discordgo.Message
 }
 
 func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -39,6 +40,8 @@ func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handlePauseEvent(s, i)
 	case "button_list_queue":
 		manager.handleListQueueEvent(s, i)
+	case "expand_list":
+		handleExpandUploadedList(s, i, manager.player.(*filePlayer.FilePlayer))
 	}
 }
 
@@ -68,11 +71,11 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fallthrough
 	case "FileUpload":
 		if manager == nil {
-			manager = &PlayerManager{filePlayer.InitFilePlayer()}
+			manager = &PlayerManager{filePlayer.InitFilePlayer(), nil}
 		}
 	default:
 		if manager == nil {
-			manager = &PlayerManager{filePlayer.InitFilePlayer()}
+			manager = &PlayerManager{filePlayer.InitFilePlayer(), nil}
 		}
 	}
 	manager.player.SetInteraction(i)
@@ -159,6 +162,11 @@ func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo
 	next := make(chan string)
 	go manager.player.Skip(next)
 	current := <-next
+
+	//deleting the previous message about it being paused or resumed
+	if manager.previousMessage != nil {
+		s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+	}
 	displaySongSkipped(s, i, current)
 }
 
@@ -173,8 +181,11 @@ func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordg
 	}
 
 	//deleting the previous message about it being paused or resumed
-	s.ChannelMessageDelete(i.ChannelID, i.Message.ID)
+	if manager.previousMessage != nil {
+		s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+	}
 	go manager.player.TogglePauseResume()
+	manager.previousMessage = i.Message
 }
 
 func handleFileUploadEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
@@ -199,18 +210,27 @@ func (manager *PlayerManager) handleCancelEvent(s *discordgo.Session, i *discord
 	})
 
 	//deleting message after hitting the cancel button
-	s.ChannelMessageDelete(i.ChannelID, i.Message.ID)
+	s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
+	manager.previousMessage = i.Message
 }
 
 func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if manager.player != nil {
 		displayQueue(s, i)
+		manager.previousMessage = i.Message
+	}
+}
+
+func handleExpandUploadedList(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+	if manager.player != nil {
+		displayUploadedSongs(s, i, player, true)
+		manager.previousMessage = i.Message
 	}
 }
 
 func handleListUploadedEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
 	if manager.player != nil {
-		displayUploadedSongs(s, i, player)
+		displayUploadedSongs(s, i, player, false)
 	}
 }
 func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {

@@ -19,6 +19,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const DisplayListLimit = 5
+
 func sendComplex(embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -125,8 +127,12 @@ func formatTimestamp(d time.Duration) string {
 func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	list := ""
 	queue := manager.player.GetQueue() //TODO: move this to the parameter once implemented a custom Queue type
-	for j := 0; j < len(queue); j++ {
-		list += fmt.Sprintf("%d. %s\n", j+1, queue[j])
+	if len(queue) > 0 {
+		for j := 0; j < len(queue); j++ {
+			list += fmt.Sprintf("%d. %s\n", j+1, queue[j])
+		}
+	} else {
+		list = "There are currently no songs in the queue."
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -137,12 +143,16 @@ func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
 
-func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
+func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer, showAll bool) {
 	songs := player.GetUploadedSongs()
+	songsToDisplay := len(songs)
 	var embed discordgo.MessageEmbed
-	if len(songs) > 0 {
+	if songsToDisplay > 0 {
 		list := ""
-		for j := 0; j < len(songs); j++ {
+		if songsToDisplay >= DisplayListLimit && !showAll {
+			songsToDisplay = DisplayListLimit
+		}
+		for j := 0; j < songsToDisplay; j++ {
 			list += fmt.Sprintf("%d. %s \n", j+1, songs[j])
 		}
 
@@ -158,5 +168,8 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 			Color:       components.PURPLE,
 		}
 	}
-	sendEmbed([]*discordgo.MessageEmbed{&embed}, s, i)
+	sendComplex(
+		[]*discordgo.MessageEmbed{&embed},
+		[]discordgo.MessageComponent{components.ExpandListButton},
+		s, i)
 }

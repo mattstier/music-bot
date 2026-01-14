@@ -36,3 +36,9 @@ var ListQueueButton = discordgo.Button{
 	Style:    discordgo.SecondaryButton,
 	CustomID: "button_list_queue",
 }
+
+var ExpandListButton = discordgo.Button{
+	Label:    "Show all",
+	Style:    discordgo.SecondaryButton,
+	CustomID: "expand_list",
+}
