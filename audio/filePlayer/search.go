@@ -62,7 +62,7 @@ func GetClosestMatch(term string) types.Song {
 	if highest < searchSimilarityThreshold {
 		return nil
 	}
-	return &Song{highestName, 0, mediaDir + "/" + highestName}
+	return &Song{highestName, nil, mediaDir + "/" + highestName}
 }
 
 // using a weighed average of the similarities of the title, artist and album

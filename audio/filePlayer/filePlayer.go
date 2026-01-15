@@ -12,9 +12,6 @@ import (
 	"fmt"
 	"music-bot/audio/types"
 	"os"
-	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -192,16 +189,6 @@ func (player *FilePlayer) loadFileNames(path string) []string {
 	return fileNames
 }
 
-func (player *FilePlayer) SongLength(song types.Song) (time.Duration, error) {
-	out, _ := exec.Command("ffprobe",
-		"-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		mediaDir+"/"+song.GetName()).Output()
-
-	f, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-
-	// Convert float to time.Duration
-	duration := time.Duration(f * float64(time.Second))
-	return duration, nil
+func (player *FilePlayer) SongLength(song types.Song) time.Duration {
+	return song.GetDuration()
 }

@@ -2,6 +2,7 @@ package types
 
 import "iter"
 
+// iterable queue interface for song playlists
 type Queue interface {
 	Enqueue(Song)
 	Dequeue() Song
