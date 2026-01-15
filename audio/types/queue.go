@@ -1,5 +1,7 @@
 package types
 
+import "iter"
+
 type Queue interface {
 	Enqueue(Song)
 	Dequeue() Song
@@ -8,4 +10,6 @@ type Queue interface {
 	PeekLastAdded() Song
 	Length() int
 	Find(string) (Song, bool)
+	List() []Song
+	All() iter.Seq[Song]
 }

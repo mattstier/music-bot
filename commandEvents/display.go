@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"music-bot/audio/filePlayer"
+	"music-bot/audio/types"
 	"music-bot/components"
 	"time"
 
@@ -23,9 +24,9 @@ import (
 const DisplayListLimit = 5
 const ProgressBarLength = 10
 
-func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
+func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, song types.Song) {
 	embed := &discordgo.MessageEmbed{
-		Title:       "Song \"" + song + "\" queued",
+		Title:       "Song \"" + song.GetName() + "\" queued",
 		Description: i.Member.User.Username + " added a song to the queue",
 		Color:       components.PURPLE,
 	}
@@ -35,21 +36,31 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 		s, i)
 }
 
-func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
+func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Song not found",
-		Description: fmt.Sprintf("No results for the term %q", song),
+		Description: fmt.Sprintf("No results for the term %q", name),
 		Color:       components.RED,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
-func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, current string) {
-	embed := &discordgo.MessageEmbed{
-		Title:       i.Member.User.Username + " skipped this song",
-		Description: "Playing next song: " + current,
-		Color:       components.RED,
+func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, current types.Song) {
+	var embed *discordgo.MessageEmbed
+	if current != nil {
+		embed = &discordgo.MessageEmbed{
+			Title:       i.Member.User.Username + " skipped this song",
+			Description: "Playing next song: " + current.GetName(),
+			Color:       components.RED,
+		}
+	} else {
+		embed = &discordgo.MessageEmbed{
+			Title:       i.Member.User.Username + " skipped this song",
+			Description: "No more songs to play. You can add a song to the queue with /play",
+			Color:       components.RED,
+		}
+
+		sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 	}
-	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
 
 func displayUpload(s *discordgo.Session, i *discordgo.InteractionCreate, attachment discordgo.MessageAttachment) {
@@ -83,12 +94,11 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
 	position := manager.player.Timestamp()
 	currentSong := manager.player.CurrentSong()
-	currentSongLength, _ := manager.player.SongLength(currentSong)
-	progressBar := generateLoadingBar(position, currentSongLength, ProgressBarLength)
+	progressBar := generateLoadingBar(position, currentSong.GetDuration(), ProgressBarLength)
 
 	embed := &discordgo.MessageEmbed{
 		Title:       user + " paused this song",
-		Description: fmt.Sprintf("%s (%s) \n%s", currentSong, formatTimestamp(position), progressBar),
+		Description: fmt.Sprintf("%s (%s) \n%s", currentSong.GetName(), formatTimestamp(position), progressBar),
 		Color:       components.GREEN,
 	}
 	updateComplexReply(
@@ -107,15 +117,18 @@ func formatTimestamp(d time.Duration) string {
 
 func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	list := ""
-	queue := manager.player.GetQueue() //TODO: move this to the parameter once implemented a custom Queue type
-	if len(queue) > 0 {
-		for j := 0; j < len(queue); j++ {
-			current := queue[j]
-			if current == nil || current.GetName() == "" {
+	queue := manager.player.GetQueue()
+	if queue.Length() > 0 {
+		position := 1
+		for song := range queue.All() {
+			name := song.GetName()
+			//stop if they don't have name, this maybe unnecessary
+			if name == "" {
 				break
 			}
-			list += fmt.Sprintf("%d. %s\n", j+1, current.GetName())
-			//TODO: handle for get Duration ...
+			list += fmt.Sprintf("%d. %s\n", position, name)
+			position++
+			//TODO: handle displaying Duration ...
 		}
 	} else {
 		list = "There are currently no songs in the queue."
@@ -172,6 +185,9 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 }
 
 func generateLoadingBar(timestamp time.Duration, songLength time.Duration, size int) string {
+	if songLength == 0 {
+		return ""
+	}
 	loadingBar := ""
 	conversionRatio := float64(timestamp.Milliseconds()) / float64(songLength.Milliseconds())
 	loaded := int(math.Ceil(float64(size) * conversionRatio))

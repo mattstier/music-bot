@@ -9,16 +9,16 @@ import (
 type Player interface {
 	//commands
 	Start()
-	Play(song string)
+	Play(song Song)
 	TogglePauseResume()
-	Skip(next chan string)
-	CurrentSong() string
-	SongLength(name string) (time.Duration, error)
+	Skip(next chan Song)
+	CurrentSong() Song
+	SongLength(song Song) (time.Duration, error)
 	IsPlaying() bool
 	Timestamp() time.Duration
-	FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string
-	QueueSong(song string)
-	GetQueue() []Song
+	FindSong(query *discordgo.ApplicationCommandInteractionDataOption) Song
+	QueueSong(song Song)
+	GetQueue() Queue
 	RemoveLastQueued()
 
 	//misc

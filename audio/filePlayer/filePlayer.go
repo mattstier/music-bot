@@ -26,16 +26,16 @@ type FilePlayer struct {
 	isPlaying   bool
 	songs       Queue
 	timestamp   time.Duration
-	currentSong int
+	currentSong *Song
 	done        chan struct{}
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
 	connection  *discordgo.VoiceConnection
 }
 
-func (player *FilePlayer) QueueSong(song string) {
-	songDuration, _ := player.SongLength(song)
-	player.songs.Enqueue(Song{name: song, duration: songDuration})
+func (player *FilePlayer) QueueSong(song types.Song) {
+	player.songs.Enqueue(song)
+	fmt.Println(player.songs.List())
 	fmt.Println(player.songs)
 }
 
@@ -50,6 +50,7 @@ func (player *FilePlayer) TogglePauseResume() {
 	if player.session == nil {
 		return
 	}
+	current := player.CurrentSong()
 	if player.IsPlaying() {
 		//stop playing
 		player.done <- struct{}{}
@@ -58,20 +59,19 @@ func (player *FilePlayer) TogglePauseResume() {
 		player.done = make(chan struct{})
 		//play the song again (looks at player timestamp)
 		fmt.Println(fmt.Sprintf("Resuming song from %v seconds", player.timestamp.Seconds()))
-		go player.Play(player.CurrentSong())
+		if current != nil {
+			go player.Play(current)
+		}
 
 		//TODO: refactor this to not scatter displaying logic
 		//display current song again, when resuming
-		player.displayCurrentSong()
+		player.displayCurrentSong(current)
 	}
 }
 
-func (player *FilePlayer) CurrentSong() string {
+func (player *FilePlayer) CurrentSong() types.Song {
 	current := player.songs.Peek()
-	if current == nil {
-		return ""
-	}
-	return current.(Song).name
+	return current
 }
 
 func (player *FilePlayer) Timestamp() time.Duration {
@@ -99,15 +99,15 @@ func (player *FilePlayer) IsPlaying() bool {
 	return player.isPlaying
 }
 
-func (player *FilePlayer) GetQueue() []types.Song {
-	return player.songs.baseArray
+func (player *FilePlayer) GetQueue() types.Queue {
+	return &player.songs
 }
 
 func InitFilePlayer() *FilePlayer {
 	return &FilePlayer{
 		isPlaying:   false,
 		songs:       *NewQueue(),
-		currentSong: 0,
+		currentSong: nil,
 		done:        make(chan struct{}),
 		session:     nil,
 		connection:  nil,
@@ -118,40 +118,45 @@ func InitFilePlayer() *FilePlayer {
 func (player *FilePlayer) Start() {
 
 	for player.songs.Length() > 0 {
-		go player.displayCurrentSong()
-		current := player.CurrentSong()
+
+		current := player.songs.Peek()
+		go player.displayCurrentSong(current)
 		fmt.Println("Current: ", current)
 		fmt.Println(player.songs)
-		player.Play(current)
-		//wait a second between songs
-		time.Sleep(delayBetweenSongs)
-		//only increment song if the stop is from a skip
-		//(only happens when timestamp is zero)
-		if player.timestamp == 0 {
-			player.currentSong++
+		if current != nil {
+			player.Play(current.(types.Song))
+			//wait a second between songs
+			time.Sleep(delayBetweenSongs)
+			//only increment song if the stop is from a skip
+			//(only happens when timestamp is zero)
+			if player.timestamp == 0 {
+				player.songs.Dequeue()
+			}
 		}
 	}
 }
 
-func (player *FilePlayer) Skip(next chan string) {
-	player.currentSong++
-	current := player.CurrentSong()
+func (player *FilePlayer) Skip(next chan types.Song) {
+	player.songs.Dequeue()
+	current := player.songs.Peek()
 	next <- current
 
 	//stop channel
 	player.done <- struct{}{}
 	player.timestamp = 0
-	go player.Play(current)
+	if current != nil {
+		go player.Play(current.(types.Song))
+	}
 }
 
-func (player *FilePlayer) Play(song string) {
+func (player *FilePlayer) Play(song types.Song) {
 	player.done = make(chan struct{})
 	vc := player.connection
 	player.isPlaying = true
 
 	vc.Speaking(true)
 	defer vc.Speaking(false)
-	player.streamAudio(vc)
+	player.streamAudio(vc, song.GetName())
 
 }
 
@@ -160,7 +165,7 @@ func (player *FilePlayer) UploadFile(file *discordgo.MessageAttachment) error {
 }
 
 // returns the name of the result found
-func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) string {
+func (player *FilePlayer) FindSong(query *discordgo.ApplicationCommandInteractionDataOption) types.Song {
 	return GetClosestMatch(query.StringValue())
 }
 
@@ -187,12 +192,12 @@ func (player *FilePlayer) loadFileNames(path string) []string {
 	return fileNames
 }
 
-func (player *FilePlayer) SongLength(name string) (time.Duration, error) {
+func (player *FilePlayer) SongLength(song types.Song) (time.Duration, error) {
 	out, _ := exec.Command("ffprobe",
 		"-v", "error",
 		"-show_entries", "format=duration",
 		"-of", "default=noprint_wrappers=1:nokey=1",
-		mediaDir+"/"+name).Output()
+		mediaDir+"/"+song.GetName()).Output()
 
 	f, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
 

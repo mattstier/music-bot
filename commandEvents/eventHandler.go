@@ -121,10 +121,10 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
-	if result != "" {
+	if result != nil {
 		queue := manager.player.GetQueue()
 		//only display that its queued if it cannot be immediately played
-		if queue != nil && len(queue) > 0 {
+		if queue != nil && queue.Length() > 0 {
 			displaySongQueued(s, i, result)
 		}
 	} else {
@@ -155,13 +155,13 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	manager.player.QueueSong(result)
 
 	//only autoplay when otherwise not playing and there are songs to play
-	if !manager.player.IsPlaying() && len(manager.player.GetQueue()) > 0 {
+	if !manager.player.IsPlaying() && manager.player.GetQueue().Length() > 0 {
 		go manager.player.Start()
 	}
 }
 
 func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	next := make(chan string)
+	next := make(chan types.Song)
 	go manager.player.Skip(next)
 	current := <-next
 

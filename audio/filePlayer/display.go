@@ -9,18 +9,19 @@
 package filePlayer
 
 import (
+	"music-bot/audio/types"
 	"music-bot/components"
 	_ "music-bot/components"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-func (player *FilePlayer) displayCurrentSong() {
+func (player *FilePlayer) displayCurrentSong(song types.Song) {
 	s := player.session
 	i := player.interaction
 	embed := &discordgo.MessageEmbed{
 		Title:       "Playing Song:",
-		Description: "\"" + player.CurrentSong() + "\"",
+		Description: "\"" + song.GetName() + "\"",
 		Color:       components.PURPLE,
 	}
 	s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{

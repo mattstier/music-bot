@@ -13,6 +13,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"music-bot/audio/types"
 	"os"
 	"os/exec"
 	"strings"
@@ -41,7 +42,7 @@ type SongData struct {
 // cache mapping original filenames to their normalized SongData
 var normalizedCache map[string]SongData
 
-func GetClosestMatch(term string) string {
+func GetClosestMatch(term string) types.Song {
 	var highestName string
 	highest := 0.0
 	//normalizing input
@@ -59,9 +60,9 @@ func GetClosestMatch(term string) string {
 		}
 	}
 	if highest < searchSimilarityThreshold {
-		return ""
+		return nil
 	}
-	return highestName
+	return &Song{highestName, 0, mediaDir + "/" + highestName}
 }
 
 // using a weighed average of the similarities of the title, artist and album

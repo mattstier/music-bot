@@ -1,6 +1,9 @@
 package filePlayer
 
-import "music-bot/audio/types"
+import (
+	"iter"
+	"music-bot/audio/types"
+)
 
 type Queue struct {
 	baseArray []types.Song
@@ -8,6 +11,10 @@ type Queue struct {
 	tail      int
 	length    int
 	capacity  int
+}
+
+func (q *Queue) List() []types.Song {
+	return q.baseArray
 }
 
 const ScalingFactor = 2
@@ -97,4 +104,16 @@ func (q *Queue) desize() {
 	q.baseArray = newBaseArray
 	q.head = 0
 	q.tail = q.length
+}
+
+// returns an iterator, to be used in for-each loops
+func (q *Queue) All() iter.Seq[types.Song] {
+	return func(yield func(types.Song) bool) {
+		for i := 0; i < q.length; i++ {
+			index := (q.head + i) % len(q.baseArray)
+			if !yield(q.baseArray[index]) {
+				return
+			}
+		}
+	}
 }
