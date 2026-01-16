@@ -22,7 +22,6 @@ import (
 )
 
 const DisplayListLimit = 5
-const ProgressBarLength = 10
 
 func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, song types.Song) {
 	embed := &discordgo.MessageEmbed{
@@ -94,7 +93,7 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
 	position := manager.player.Timestamp()
 	currentSong := manager.player.CurrentSong()
-	progressBar := generateLoadingBar(position, currentSong.GetDuration(), ProgressBarLength)
+	progressBar := generateLoadingBar(position, currentSong.GetDuration(), len(currentSong.GetName()))
 
 	embed := &discordgo.MessageEmbed{
 		Title:       user + " paused this song",
@@ -122,13 +121,13 @@ func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		position := 1
 		for song := range queue.All() {
 			name := song.GetName()
+			duration := song.GetDuration()
 			//stop if they don't have name, this maybe unnecessary
 			if name == "" {
 				break
 			}
-			list += fmt.Sprintf("%d. %s\n", position, name)
+			list += fmt.Sprintf("%d. %s (%s)\n", position, name, formatTimestamp(duration))
 			position++
-			//TODO: handle displaying Duration ...
 		}
 	} else {
 		list = "There are currently no songs in the queue."

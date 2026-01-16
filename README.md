@@ -40,6 +40,7 @@ This bot was built to cater to the following quality attributes
     - Drag-and-drop file upload
     - Clear immediate feedback - using Discord's _**message embeds**_ .
     - Automatic handling of voice join/leave, search fallback, and notifications about invalid inputs.
+    - For more information on how to use the system, you can read the [User Manual](./docs/USER_MANUAL.md). 
 
 ### For Developers
 - **Modularity**
@@ -86,7 +87,7 @@ This bot was built to cater to the following quality attributes
 - Then install [Air](https://github.com/air-verse/air#) a live-reloading tool for Go
   - Install it as a standalone tool by running `go install github.com/air-verse/air@latest`
   - Run the image by mounting the docker container to your local repository
-    - On _Windows Powershell_: `docker run --rm -it -v ${PWD}:/go/src/app music-bot:latest`
+    - On _Windows PowerShell_: `docker run --rm -it -v ${PWD}:/go/src/app music-bot:latest`
     - On _Linux/MacOS_: `docker run --rm -it -v $(pwd):/go/src/app music-bot:latest`
 - Or run the container simply by running `docker run music-bot:latest`
 
