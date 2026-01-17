@@ -48,6 +48,5 @@ func (s Song) GetDuration() time.Duration {
 }
 
 func (s Song) GetFilePath() string {
-	//TODO implement me
-	panic("implement me")
+	return s.path
 }

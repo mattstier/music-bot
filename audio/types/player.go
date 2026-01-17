@@ -11,7 +11,7 @@ type Player interface {
 	Start()
 	Play(song Song)
 	TogglePauseResume()
-	Skip(next chan Song)
+	Skip()
 	CurrentSong() Song
 	SongLength(song Song) time.Duration
 	IsPlaying() bool

@@ -161,15 +161,13 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 }
 
 func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	next := make(chan types.Song)
-	go manager.player.Skip(next)
-	current := <-next
+	go manager.player.Skip()
 
 	//deleting the previous message about it being paused or resumed
 	if manager.previousMessage != nil {
 		s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
 	}
-	displaySongSkipped(s, i, current)
+	displaySongSkipped(s, i, manager.player.CurrentSong())
 }
 
 func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {

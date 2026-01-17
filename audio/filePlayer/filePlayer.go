@@ -117,7 +117,6 @@ func (player *FilePlayer) Start() {
 	for player.songs.Length() > 0 {
 
 		current := player.songs.Peek()
-		go player.displayCurrentSong(current)
 		fmt.Println("Current: ", current)
 		fmt.Println(player.songs)
 		if current != nil {
@@ -126,34 +125,32 @@ func (player *FilePlayer) Start() {
 			time.Sleep(delayBetweenSongs)
 			//only increment song if the stop is from a skip
 			//(only happens when timestamp is zero)
+			fmt.Println("This should always print")
 			if player.timestamp == 0 {
+				fmt.Println("This is a test to see it this triggers")
 				player.songs.Dequeue()
 			}
 		}
 	}
 }
 
-func (player *FilePlayer) Skip(next chan types.Song) {
+func (player *FilePlayer) Skip() {
 	player.songs.Dequeue()
-	current := player.songs.Peek()
-	next <- current
 
 	//stop channel
 	player.done <- struct{}{}
 	player.timestamp = 0
-	if current != nil {
-		go player.Play(current.(types.Song))
-	}
 }
 
 func (player *FilePlayer) Play(song types.Song) {
+	go player.displayCurrentSong(song)
 	player.done = make(chan struct{})
 	vc := player.connection
 	player.isPlaying = true
 
 	vc.Speaking(true)
 	defer vc.Speaking(false)
-	player.streamAudio(vc, song.GetName())
+	player.streamAudio(vc, song)
 
 }
 
