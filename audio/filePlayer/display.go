@@ -29,7 +29,9 @@ func (player *FilePlayer) displayCurrentSong(song types.Song) {
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
+					components.BackwardJumpButton,
 					components.PauseButton,
+					components.ForwardJumpButton,
 					components.SkipButton,
 				},
 			},

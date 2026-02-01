@@ -77,7 +77,7 @@ var SeekCommand = &discordgo.ApplicationCommand{
 		{
 			Type:        discordgo.ApplicationCommandOptionString,
 			Name:        "timestamp",
-			Description: "Input the timestamp in the song in the following formats: 1m30s or 100s",
+			Description: "Input the timestamp in the song in the following formats: 1m30s or 90(s) or 01:30",
 			Required:    true,
 		},
 	},
@@ -90,7 +90,7 @@ var JumpCommand = &discordgo.ApplicationCommand{
 		{
 			Type:        discordgo.ApplicationCommandOptionString,
 			Name:        "amount",
-			Description: "Input the offset by which you want to jump in the song in the following format: 10s or -5s",
+			Description: "Input the offset by which you want to jump in the song in the following format: 10s or -5 or 00:10",
 			Required:    true,
 		},
 	},

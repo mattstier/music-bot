@@ -126,7 +126,6 @@ func (player *FilePlayer) Start() {
 				time.Sleep(delayBetweenSongs)
 				//only increment song if the stop is from a skip
 				//(only happens when timestamp is zero)
-				fmt.Println("This should always print")
 				if player.timestamp == 0 {
 					player.songs.Dequeue()
 				}

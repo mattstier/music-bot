@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +41,10 @@ func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleSkipEvent(s, i)
 	case "button_pause":
 		manager.handlePauseEvent(s, i)
+	case "button_jump_10s_forward":
+		manager.handleJumpEvent(s, i, "10s")
+	case "button_jump_10s_backward":
+		manager.handleJumpEvent(s, i, "-10s")
 	case "button_list_queue":
 		manager.handleListQueueEvent(s, i)
 	case "expand_list":
@@ -295,7 +300,14 @@ func parseTimeStamp(userArg string) (time.Duration, error) {
 	timestamp, err := time.ParseDuration(userArg)
 	//handle going out bounds with the songs duration or a parsing error
 	if err != nil {
-		return time.Duration(0), errors.New("Invalid time format")
+		// in case it cannot be parsed but is a valid integer, we interpret them as seconds
+		if userInt, atoiErr := strconv.Atoi(userArg); atoiErr == nil {
+			timestamp = time.Duration(userInt) * time.Second
+		} else if t, timeParseErr := time.Parse("04:05", userArg); timeParseErr == nil {
+			timestamp = time.Duration(t.Minute())*time.Minute + time.Duration(t.Second())*time.Second
+		} else {
+			return time.Duration(0), errors.New("Invalid time format")
+		}
 	}
 
 	// handles negative user argument, only allowing it if it is within the songs bounds
