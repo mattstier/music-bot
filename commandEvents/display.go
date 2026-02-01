@@ -10,12 +10,9 @@ package commandEvents
 
 import (
 	"fmt"
-	"math"
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
 	"music-bot/components"
-	"time"
-
 	_ "music-bot/components"
 
 	"github.com/bwmarrin/discordgo"
@@ -107,14 +104,6 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		s, i)
 }
 
-func formatTimestamp(d time.Duration) string {
-	totalSeconds := int(d.Seconds())
-	hours := totalSeconds / 3600
-	minutes := (totalSeconds % 3600) / 60
-	seconds := totalSeconds % 60
-	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-}
-
 func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	list := ""
 	queue := manager.player.GetQueue()
@@ -182,24 +171,6 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 			[]discordgo.MessageComponent{button},
 			s, i)
 	}
-}
-
-func generateLoadingBar(timestamp time.Duration, songLength time.Duration, size int) string {
-	if songLength == 0 {
-		return ""
-	}
-	loadingBar := ""
-	conversionRatio := float64(timestamp.Milliseconds()) / float64(songLength.Milliseconds())
-	loaded := int(math.Ceil(float64(size) * conversionRatio))
-
-	for i := 0; i < size; i++ {
-		if i <= loaded {
-			loadingBar += "▓"
-		} else {
-			loadingBar += "░"
-		}
-	}
-	return loadingBar
 }
 
 func displayJumpedToTimestamp(s *discordgo.Session, i *discordgo.InteractionCreate) {

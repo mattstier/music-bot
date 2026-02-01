@@ -10,12 +10,9 @@ package commandEvents
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -290,29 +287,4 @@ func (manager *PlayerManager) handleJumpEvent(s *discordgo.Session, i *discordgo
 		displayJumpedToTimestamp(s, i)
 
 	}
-}
-
-func parseTimeStamp(userArg string) (time.Duration, error) {
-	// cleaning up timestamp for spaces
-	userArg = strings.TrimSpace(userArg)
-	currentSong := manager.player.CurrentSong()
-
-	timestamp, err := time.ParseDuration(userArg)
-	//handle going out bounds with the songs duration or a parsing error
-	if err != nil {
-		// in case it cannot be parsed but is a valid integer, we interpret them as seconds
-		if userInt, atoiErr := strconv.Atoi(userArg); atoiErr == nil {
-			timestamp = time.Duration(userInt) * time.Second
-		} else if t, timeParseErr := time.Parse("04:05", userArg); timeParseErr == nil {
-			timestamp = time.Duration(t.Minute())*time.Minute + time.Duration(t.Second())*time.Second
-		} else {
-			return time.Duration(0), errors.New("Invalid time format")
-		}
-	}
-
-	// handles negative user argument, only allowing it if it is within the songs bounds
-	if (manager.player.Timestamp()+timestamp) < 0 || timestamp > currentSong.GetDuration() {
-		return time.Duration(0), errors.New("Invalid timestamp")
-	}
-	return timestamp, nil
 }
