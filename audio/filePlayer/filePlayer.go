@@ -28,7 +28,7 @@ type FilePlayer struct {
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
 	connection  *discordgo.VoiceConnection
-	isPaused 	bool
+	isPaused    bool
 }
 
 func (player *FilePlayer) QueueSong(song types.Song) {
@@ -109,7 +109,7 @@ func InitFilePlayer() *FilePlayer {
 		session:     nil,
 		connection:  nil,
 		timestamp:   0,
-		isPaused: false, 
+		isPaused:    false,
 	}
 }
 
@@ -120,7 +120,7 @@ func (player *FilePlayer) Start() {
 			current := player.songs.Peek()
 			fmt.Println("Current: ", current)
 			fmt.Println(player.songs)
-			if current != nil { 
+			if current != nil {
 				player.Play(current.(types.Song))
 				//wait a second between songs
 				time.Sleep(delayBetweenSongs)
@@ -189,4 +189,8 @@ func (player *FilePlayer) loadFileNames(path string) []string {
 
 func (player *FilePlayer) SongLength(song types.Song) time.Duration {
 	return song.GetDuration()
+}
+
+func (player *FilePlayer) SetTimestamp(timestamp time.Duration) {
+	player.timestamp = timestamp
 }

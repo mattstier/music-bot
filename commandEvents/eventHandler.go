@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -97,6 +98,10 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleListQueueEvent(s, i)
 	case "uploaded":
 		handleListUploadedEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+	case "seek":
+		manager.handleSeekEvent(s, i, event.Options[0].StringValue())
+	case "jump":
+		manager.handleJumpEvent(s, i, event.Options[0].StringValue())
 	case "quit":
 		manager.handleQuitEvent(s, i)
 	}
@@ -241,4 +246,39 @@ func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo
 		displayQuit(s, i)
 		manager.player.LeaveVoiceChannel()
 	}
+}
+
+func (manager *PlayerManager) handleSeekEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
+	if manager.player != nil {
+		displayJumpedToTimestamp(s, i)
+
+		timestamp := parseTimeStamp(userArg)
+
+		manager.player.TogglePauseResume()
+		manager.player.SetTimestamp(timestamp)
+		manager.player.TogglePauseResume()
+	}
+}
+
+func (manager *PlayerManager) handleJumpEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
+	if manager.player != nil {
+		displayJumpedToTimestamp(s, i)
+		timestamp := manager.player.Timestamp() + parseTimeStamp(userArg)
+
+		manager.player.TogglePauseResume()
+		manager.player.SetTimestamp(timestamp)
+		manager.player.TogglePauseResume()
+
+	}
+}
+
+func parseTimeStamp(userArg string) time.Duration {
+	// cleaning up timestamp for spaces
+	userArg = strings.TrimSpace(userArg)
+
+	timestamp, err := time.ParseDuration(userArg)
+	if err != nil || userArg == "" {
+		timestamp = time.Duration(0)
+	}
+	return timestamp
 }

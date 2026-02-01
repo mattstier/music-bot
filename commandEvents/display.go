@@ -43,6 +43,7 @@ func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, n
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
+
 func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, current types.Song) {
 	var embed *discordgo.MessageEmbed
 	if current != nil {
@@ -199,4 +200,18 @@ func generateLoadingBar(timestamp time.Duration, songLength time.Duration, size 
 		}
 	}
 	return loadingBar
+}
+
+func displayJumpedToTimestamp(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	user := i.Member.User.Username
+	position := manager.player.Timestamp()
+	currentSong := manager.player.CurrentSong()
+	progressBar := generateLoadingBar(position, currentSong.GetDuration(), len(currentSong.GetName()))
+
+	embed := &discordgo.MessageEmbed{
+		Title:       user + " jumped to the following",
+		Description: fmt.Sprintf("%s (%s) \n%s", currentSong.GetName(), formatTimestamp(position), progressBar),
+		Color:       components.GREEN,
+	}
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }

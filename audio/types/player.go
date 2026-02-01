@@ -20,6 +20,7 @@ type Player interface {
 	QueueSong(song Song)
 	GetQueue() Queue
 	RemoveLastQueued()
+	SetTimestamp(timestamp time.Duration)
 
 	//misc
 	SetSession(session *discordgo.Session)
