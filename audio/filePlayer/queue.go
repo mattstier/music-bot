@@ -65,6 +65,9 @@ func (q *Queue) DequeueLastAdded() types.Song {
 	}
 	lastAdded := q.baseArray[q.tail]
 	q.baseArray[q.tail] = nil
+	capacity := len(q.baseArray)
+	q.tail = (q.tail - 1 + capacity) % capacity
+	q.length--
 	return lastAdded
 }
 
