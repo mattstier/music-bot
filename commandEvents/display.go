@@ -215,3 +215,12 @@ func displayJumpedToTimestamp(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
+
+func displayInvalidArgument(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string, err error) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Invalid Argument",
+		Description: fmt.Sprintf("Argument '%s' is invalid \n Reason: '%s' ", userArg, err),
+		Color:       components.RED,
+	}
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
+}

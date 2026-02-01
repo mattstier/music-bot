@@ -10,6 +10,7 @@ package commandEvents
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
@@ -250,35 +251,56 @@ func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo
 
 func (manager *PlayerManager) handleSeekEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
 	if manager.player != nil {
-		displayJumpedToTimestamp(s, i)
 
-		timestamp := parseTimeStamp(userArg)
-
+		timestamp, err := parseTimeStamp(userArg)
+		if err != nil {
+			displayInvalidArgument(s, i, userArg, err)
+			return
+		}
 		manager.player.TogglePauseResume()
 		manager.player.SetTimestamp(timestamp)
+		//cushion to avoid an unsuccessful timestamp setting
+		//TODO: make Toggling atomic
+		time.Sleep(500 * time.Millisecond)
 		manager.player.TogglePauseResume()
+		displayJumpedToTimestamp(s, i)
 	}
 }
 
 func (manager *PlayerManager) handleJumpEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
 	if manager.player != nil {
-		displayJumpedToTimestamp(s, i)
-		timestamp := manager.player.Timestamp() + parseTimeStamp(userArg)
+		parsedTimestamp, err := parseTimeStamp(userArg)
+		if err != nil {
+			displayInvalidArgument(s, i, userArg, err)
+			return
+		}
+		newTimestamp := manager.player.Timestamp() + parsedTimestamp
 
 		manager.player.TogglePauseResume()
-		manager.player.SetTimestamp(timestamp)
+		manager.player.SetTimestamp(newTimestamp)
+		//cushion to avoid an unsuccessful timestamp setting
+		//TODO: make Toggling atomic
+		time.Sleep(500 * time.Millisecond)
 		manager.player.TogglePauseResume()
+		displayJumpedToTimestamp(s, i)
 
 	}
 }
 
-func parseTimeStamp(userArg string) time.Duration {
+func parseTimeStamp(userArg string) (time.Duration, error) {
 	// cleaning up timestamp for spaces
 	userArg = strings.TrimSpace(userArg)
+	currentSong := manager.player.CurrentSong()
 
 	timestamp, err := time.ParseDuration(userArg)
-	if err != nil || userArg == "" {
-		timestamp = time.Duration(0)
+	//handle going out bounds with the songs duration or a parsing error
+	if err != nil {
+		return time.Duration(0), errors.New("Invalid time format")
 	}
-	return timestamp
+
+	// handles negative user argument, only allowing it if it is within the songs bounds
+	if (manager.player.Timestamp()+timestamp) < 0 || timestamp > currentSong.GetDuration() {
+		return time.Duration(0), errors.New("Invalid timestamp")
+	}
+	return timestamp, nil
 }
