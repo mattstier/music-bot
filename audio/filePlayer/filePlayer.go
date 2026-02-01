@@ -28,6 +28,7 @@ type FilePlayer struct {
 	session     *discordgo.Session
 	interaction *discordgo.InteractionCreate
 	connection  *discordgo.VoiceConnection
+	isPaused 	bool
 }
 
 func (player *FilePlayer) QueueSong(song types.Song) {
@@ -51,14 +52,13 @@ func (player *FilePlayer) TogglePauseResume() {
 	if player.IsPlaying() {
 		//stop playing
 		player.done <- struct{}{}
+		player.isPaused = true
 		fmt.Println(fmt.Sprintf("Song stopped at %v seconds", player.timestamp.Seconds()))
 	} else {
 		player.done = make(chan struct{})
 		//play the song again (looks at player timestamp)
 		fmt.Println(fmt.Sprintf("Resuming song from %v seconds", player.timestamp.Seconds()))
-		if current != nil {
-			go player.Play(current)
-		}
+		player.isPaused = false
 
 		//TODO: refactor this to not scatter displaying logic
 		//display current song again, when resuming
@@ -109,26 +109,27 @@ func InitFilePlayer() *FilePlayer {
 		session:     nil,
 		connection:  nil,
 		timestamp:   0,
+		isPaused: false, 
 	}
 }
 
 func (player *FilePlayer) Start() {
 
 	for player.songs.Length() > 0 {
-
-		current := player.songs.Peek()
-		fmt.Println("Current: ", current)
-		fmt.Println(player.songs)
-		if current != nil {
-			player.Play(current.(types.Song))
-			//wait a second between songs
-			time.Sleep(delayBetweenSongs)
-			//only increment song if the stop is from a skip
-			//(only happens when timestamp is zero)
-			fmt.Println("This should always print")
-			if player.timestamp == 0 {
-				fmt.Println("This is a test to see it this triggers")
-				player.songs.Dequeue()
+		if !player.isPaused {
+			current := player.songs.Peek()
+			fmt.Println("Current: ", current)
+			fmt.Println(player.songs)
+			if current != nil { 
+				player.Play(current.(types.Song))
+				//wait a second between songs
+				time.Sleep(delayBetweenSongs)
+				//only increment song if the stop is from a skip
+				//(only happens when timestamp is zero)
+				fmt.Println("This should always print")
+				if player.timestamp == 0 {
+					player.songs.Dequeue()
+				}
 			}
 		}
 	}
