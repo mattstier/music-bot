@@ -119,6 +119,13 @@ func (player *FilePlayer) Start() {
 	defer player.running.Store(false)
 
 	for player.songs.Length() > 0 {
+		if player.needsAdvance.Load() {
+			player.needsAdvance.Store(false)
+			player.songs.Dequeue()
+			player.timestamp = 0
+			continue
+		}
+
 		if !player.isPaused {
 			current := player.songs.Peek()
 			fmt.Println("Current: ", current)
@@ -137,8 +144,11 @@ func (player *FilePlayer) Start() {
 
 func (player *FilePlayer) Skip() {
 	player.needsAdvance.Store(true)
-	player.done <- struct{}{}
 	player.timestamp = 0
+	select {
+	case player.done <- struct{}{}:
+	default:
+	}
 }
 
 func (player *FilePlayer) Play(song types.Song) {

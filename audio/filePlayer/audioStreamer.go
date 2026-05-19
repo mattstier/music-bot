@@ -57,7 +57,10 @@ func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection, song types.
 			fmt.Println("Song finished")
 		}
 		player.isPlaying = false
-		player.done <- struct{}{}
+		select {
+		case player.done <- struct{}{}:
+		default:
+		}
 
 	}()
 	//sending/streaming pcm into the pcm channel
