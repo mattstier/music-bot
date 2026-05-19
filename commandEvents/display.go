@@ -55,9 +55,9 @@ func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, cu
 			Description: "No more songs to play. You can add a song to the queue with /play",
 			Color:       components.RED,
 		}
-
-		sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 	}
+
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
 
 func displayUpload(s *discordgo.Session, i *discordgo.InteractionCreate, attachment discordgo.MessageAttachment) {

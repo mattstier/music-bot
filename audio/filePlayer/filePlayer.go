@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"music-bot/audio/types"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -20,15 +21,16 @@ import (
 )
 
 type FilePlayer struct {
-	isPlaying   bool
-	songs       Queue
-	timestamp   time.Duration
-	currentSong *Song
-	done        chan struct{}
-	session     *discordgo.Session
-	interaction *discordgo.InteractionCreate
-	connection  *discordgo.VoiceConnection
-	isPaused    bool
+	isPlaying     bool
+	songs         Queue
+	timestamp     time.Duration
+	currentSong   *Song
+	done          chan struct{}
+	session       *discordgo.Session
+	interaction   *discordgo.InteractionCreate
+	connection    *discordgo.VoiceConnection
+	isPaused      bool
+	needsAdvance  atomic.Bool
 }
 
 func (player *FilePlayer) QueueSong(song types.Song) {
@@ -122,11 +124,9 @@ func (player *FilePlayer) Start() {
 			fmt.Println(player.songs)
 			if current != nil {
 				player.Play(current.(types.Song))
-				//wait a second between songs
 				time.Sleep(delayBetweenSongs)
-				//only increment song if the stop is from a skip
-				//(only happens when timestamp is zero)
-				if player.timestamp == 0 {
+				if player.needsAdvance.Load() {
+					player.needsAdvance.Store(false)
 					player.songs.Dequeue()
 				}
 			}
@@ -135,9 +135,7 @@ func (player *FilePlayer) Start() {
 }
 
 func (player *FilePlayer) Skip() {
-	player.songs.Dequeue()
-
-	//stop channel
+	player.needsAdvance.Store(true)
 	player.done <- struct{}{}
 	player.timestamp = 0
 }

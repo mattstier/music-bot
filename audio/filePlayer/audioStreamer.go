@@ -53,6 +53,7 @@ func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection, song types.
 		case <-sessionDone:
 			//reset timestamp, so next song plays from beginning
 			player.timestamp = 0
+			player.needsAdvance.Store(true)
 			fmt.Println("Song finished")
 		}
 		player.isPlaying = false
