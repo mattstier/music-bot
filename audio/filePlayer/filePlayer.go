@@ -31,6 +31,7 @@ type FilePlayer struct {
 	connection    *discordgo.VoiceConnection
 	isPaused      bool
 	needsAdvance  atomic.Bool
+	running       atomic.Bool
 }
 
 func (player *FilePlayer) QueueSong(song types.Song) {
@@ -50,7 +51,6 @@ func (player *FilePlayer) TogglePauseResume() {
 	if player.session == nil {
 		return
 	}
-	current := player.CurrentSong()
 	if player.IsPlaying() {
 		//stop playing
 		player.done <- struct{}{}
@@ -62,9 +62,6 @@ func (player *FilePlayer) TogglePauseResume() {
 		fmt.Println(fmt.Sprintf("Resuming song from %v seconds", player.timestamp.Seconds()))
 		player.isPaused = false
 
-		//TODO: refactor this to not scatter displaying logic
-		//display current song again, when resuming
-		player.displayCurrentSong(current)
 	}
 }
 
@@ -116,6 +113,10 @@ func InitFilePlayer() *FilePlayer {
 }
 
 func (player *FilePlayer) Start() {
+	if !player.running.CompareAndSwap(false, true) {
+		return
+	}
+	defer player.running.Store(false)
 
 	for player.songs.Length() > 0 {
 		if !player.isPaused {
