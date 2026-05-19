@@ -11,8 +11,8 @@ package commandEvents
 import (
 	"context"
 	"fmt"
-	"music-bot/audio"
 	"music-bot/audio/filePlayer"
+	"music-bot/audio/types"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -21,7 +21,7 @@ import (
 var manager *PlayerManager
 
 type PlayerManager struct {
-	player          audio.Player
+	player          types.Player
 	previousMessage *discordgo.Message
 }
 
@@ -38,6 +38,10 @@ func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleSkipEvent(s, i)
 	case "button_pause":
 		manager.handlePauseEvent(s, i)
+	case "button_jump_10s_forward":
+		manager.handleJumpEvent(s, i, "10s")
+	case "button_jump_10s_backward":
+		manager.handleJumpEvent(s, i, "-10s")
 	case "button_list_queue":
 		manager.handleListQueueEvent(s, i)
 	case "expand_list":
@@ -97,6 +101,10 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		manager.handleListQueueEvent(s, i)
 	case "uploaded":
 		handleListUploadedEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+	case "seek":
+		manager.handleSeekEvent(s, i, event.Options[0].StringValue())
+	case "jump":
+		manager.handleJumpEvent(s, i, event.Options[0].StringValue())
 	case "quit":
 		manager.handleQuitEvent(s, i)
 	}
@@ -121,10 +129,10 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	}
 	query := i.ApplicationCommandData().Options[0]
 	result := manager.player.FindSong(query)
-	if result != "" {
+	if result != nil {
 		queue := manager.player.GetQueue()
 		//only display that its queued if it cannot be immediately played
-		if queue != nil && len(queue) > 0 {
+		if queue != nil && queue.Length() > 0 {
 			displaySongQueued(s, i, result)
 		}
 	} else {
@@ -155,21 +163,20 @@ func (manager *PlayerManager) handlePlayEvent(s *discordgo.Session, i *discordgo
 	manager.player.QueueSong(result)
 
 	//only autoplay when otherwise not playing and there are songs to play
-	if !manager.player.IsPlaying() && len(manager.player.GetQueue()) > 0 {
+	if !manager.player.IsPlaying() && manager.player.GetQueue().Length() > 0 {
 		go manager.player.Start()
 	}
 }
 
 func (manager *PlayerManager) handleSkipEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	next := make(chan string)
-	go manager.player.Skip(next)
-	current := <-next
+	next := manager.player.CurrentSong()
+	go manager.player.Skip()
 
 	//deleting the previous message about it being paused or resumed
 	if manager.previousMessage != nil {
 		s.ChannelMessageDelete(i.ChannelID, manager.previousMessage.ID)
 	}
-	displaySongSkipped(s, i, current)
+	displaySongSkipped(s, i, next)
 }
 
 func (manager *PlayerManager) handlePauseEvent(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -242,5 +249,43 @@ func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo
 	if manager.player != nil {
 		displayQuit(s, i)
 		manager.player.LeaveVoiceChannel()
+	}
+}
+
+func (manager *PlayerManager) handleSeekEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
+	if manager.player != nil {
+
+		timestamp, err := parseTimeStamp(userArg)
+		if err != nil {
+			displayInvalidArgument(s, i, userArg, err)
+			return
+		}
+		manager.player.TogglePauseResume()
+		manager.player.SetTimestamp(timestamp)
+		//cushion to avoid an unsuccessful timestamp setting
+		//TODO: make Toggling atomic
+		time.Sleep(500 * time.Millisecond)
+		manager.player.TogglePauseResume()
+		displayJumpedToTimestamp(s, i)
+	}
+}
+
+func (manager *PlayerManager) handleJumpEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
+	if manager.player != nil {
+		parsedTimestamp, err := parseTimeStamp(userArg)
+		if err != nil {
+			displayInvalidArgument(s, i, userArg, err)
+			return
+		}
+		newTimestamp := manager.player.Timestamp() + parsedTimestamp
+
+		manager.player.TogglePauseResume()
+		manager.player.SetTimestamp(newTimestamp)
+		//cushion to avoid an unsuccessful timestamp setting
+		//TODO: make Toggling atomic
+		time.Sleep(500 * time.Millisecond)
+		manager.player.TogglePauseResume()
+		displayJumpedToTimestamp(s, i)
+
 	}
 }

@@ -31,6 +31,18 @@ var ResumeButton = discordgo.Button{
 	CustomID: "button_pause",
 }
 
+var ForwardJumpButton = discordgo.Button{
+	Label:    "+10s",
+	Style:    discordgo.SecondaryButton,
+	CustomID: "button_jump_10s_forward",
+}
+
+var BackwardJumpButton = discordgo.Button{
+	Label:    "-10s",
+	Style:    discordgo.SecondaryButton,
+	CustomID: "button_jump_10s_backward",
+}
+
 var ListQueueButton = discordgo.Button{
 	Label:    "Show queue",
 	Style:    discordgo.SecondaryButton,

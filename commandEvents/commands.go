@@ -70,6 +70,32 @@ var ListUploadedCommand = &discordgo.ApplicationCommand{
 	Description: "Lists all uploaded songs",
 }
 
+var SeekCommand = &discordgo.ApplicationCommand{
+	Name:        "seek",
+	Description: "Jump to a specific place in the current song by providing a timestamp",
+	Options: []*discordgo.ApplicationCommandOption{
+		{
+			Type:        discordgo.ApplicationCommandOptionString,
+			Name:        "timestamp",
+			Description: "Input the timestamp in the song in the following formats: 1m30s or 90(s) or 01:30",
+			Required:    true,
+		},
+	},
+}
+
+var JumpCommand = &discordgo.ApplicationCommand{
+	Name:        "jump",
+	Description: "Jump in the current song relative to the current position by specifying the seconds",
+	Options: []*discordgo.ApplicationCommandOption{
+		{
+			Type:        discordgo.ApplicationCommandOptionString,
+			Name:        "amount",
+			Description: "Input the offset by which you want to jump in the song in the following format: 10s or -5 or 00:10",
+			Required:    true,
+		},
+	},
+}
+
 var QuitCommand = &discordgo.ApplicationCommand{
 	Name:        "quit",
 	Description: "Make the bot leave the voice channel",
@@ -96,6 +122,8 @@ func RegisterCommands(session *discordgo.Session) {
 		UploadFileCommand,
 		ListCommand,
 		ListUploadedCommand,
+		SeekCommand,
+		JumpCommand,
 		QuitCommand,
 	}
 	for _, command := range commands {

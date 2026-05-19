@@ -13,6 +13,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"music-bot/audio/types"
 	"os"
 	"os/exec"
 	"strconv"
@@ -27,9 +28,9 @@ const sampleRate = 48000
 const channels = 2 // 1 for mono; 2 for stereo
 const sendRate = 20 * time.Millisecond
 
-func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection) {
+func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection, song types.Song) {
 	//creating pipe with a ffmpeg command
-	cmd, cancel := player.startFFMPEG()
+	cmd, cancel := player.startFFMPEG(song)
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Stderr = os.Stderr
 	cmd.Start()
@@ -52,10 +53,14 @@ func (player *FilePlayer) streamAudio(vc *discordgo.VoiceConnection) {
 		case <-sessionDone:
 			//reset timestamp, so next song plays from beginning
 			player.timestamp = 0
+			player.needsAdvance.Store(true)
 			fmt.Println("Song finished")
 		}
 		player.isPlaying = false
-		player.done <- struct{}{}
+		select {
+		case player.done <- struct{}{}:
+		default:
+		}
 
 	}()
 	//sending/streaming pcm into the pcm channel
@@ -135,12 +140,12 @@ func bytesToInt16(buf []byte) []int16 {
 	return samples
 }
 
-func (player *FilePlayer) startFFMPEG() (*exec.Cmd, context.CancelFunc) {
+func (player *FilePlayer) startFFMPEG(song types.Song) (*exec.Cmd, context.CancelFunc) {
 	fmt.Println(audioPath)
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-ss", fmt.Sprintf("%.3f", player.timestamp.Seconds()),
-		"-i", mediaDir+"/"+player.CurrentSong(),
+		"-i", song.GetFilePath(),
 		"-af", "aresample=resampler=soxr:osf=s16:dither_method=shibata",
 		"-loglevel", "quiet",
 		"-ar", strconv.Itoa(sampleRate),

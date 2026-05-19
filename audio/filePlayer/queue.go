@@ -1,0 +1,131 @@
+// This source file is a part of the Discord bot 'Audiophile' made by Máté Stier
+//
+// Copyright (C) 2025 Máté Stier
+//
+// This software is licensed under the "GPLv3" License as described in the "LICENSE" file,
+// which should be included with this package. The terms are also available at
+// http://www.gnu.org/licenses/gpl-3.0.html
+
+package filePlayer
+
+import (
+	"iter"
+	"music-bot/audio/types"
+)
+
+// Circular array/slice implementation of the types.Queue Interface
+type Queue struct {
+	baseArray []types.Song
+	head      int
+	tail      int
+	length    int
+	capacity  int
+}
+
+func (q *Queue) List() []types.Song {
+	return q.baseArray
+}
+
+const ScalingFactor = 2
+const QueueStartSize = 64
+
+func NewQueue() *Queue {
+	return &Queue{
+		baseArray: make([]types.Song, QueueStartSize),
+		head:      0,
+		tail:      0,
+		length:    0,
+		capacity:  QueueStartSize,
+	}
+}
+
+func (q *Queue) Enqueue(song types.Song) {
+	if q.length >= q.capacity {
+		q.resize()
+	}
+	q.baseArray[q.tail] = song
+	q.tail = (q.tail + 1) % len(q.baseArray)
+	q.length++
+}
+
+func (q *Queue) Dequeue() types.Song {
+	if q.length == 0 {
+		return nil
+	}
+	current := q.baseArray[q.head]
+	q.baseArray[q.head] = nil
+	q.head = (q.head + 1) % len(q.baseArray)
+	q.length--
+	return current
+}
+
+func (q *Queue) DequeueLastAdded() types.Song {
+	if q.length == 0 {
+		return nil
+	}
+	lastAdded := q.baseArray[q.tail]
+	q.baseArray[q.tail] = nil
+	capacity := len(q.baseArray)
+	q.tail = (q.tail - 1 + capacity) % capacity
+	q.length--
+	return lastAdded
+}
+
+func (q *Queue) Peek() types.Song {
+	if q.length == 0 {
+		return nil
+	}
+	return q.baseArray[q.head]
+}
+
+func (q *Queue) PeekLastAdded() types.Song {
+	if q.length == 0 {
+		return nil
+	}
+	return q.baseArray[q.tail]
+}
+
+func (q *Queue) Length() int {
+	return q.length
+}
+
+func (q *Queue) Find(s string) (types.Song, bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (q *Queue) resize() {
+	capacity := (q.capacity * ScalingFactor) + 1
+	newBaseArray := make([]types.Song, capacity)
+	for i := 0; i < q.length; i++ {
+		newBaseArray[i] = q.baseArray[(q.head+i)%q.capacity]
+	}
+	q.capacity = capacity
+	q.baseArray = newBaseArray
+	q.head = 0
+	q.tail = q.length
+}
+
+func (q *Queue) desize() {
+	capacity := (q.capacity / ScalingFactor) + 1
+	newBaseArray := make([]types.Song, capacity)
+	for i := 0; i < q.length; i++ {
+		newBaseArray[i] = q.baseArray[(q.head+i)%q.capacity]
+	}
+	q.capacity = capacity
+	q.baseArray = newBaseArray
+	q.head = 0
+	q.tail = q.length
+}
+
+// returns an iterator, to be used in for-each loops
+func (q *Queue) All() iter.Seq[types.Song] {
+	return func(yield func(types.Song) bool) {
+		for i := 0; i < q.length; i++ {
+			index := (q.head + i) % len(q.baseArray)
+			if !yield(q.baseArray[index]) {
+				return
+			}
+		}
+	}
+}

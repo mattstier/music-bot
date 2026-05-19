@@ -10,22 +10,19 @@ package commandEvents
 
 import (
 	"fmt"
-	"math"
 	"music-bot/audio/filePlayer"
+	"music-bot/audio/types"
 	"music-bot/components"
-	"time"
-
 	_ "music-bot/components"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 const DisplayListLimit = 5
-const ProgressBarLength = 10
 
-func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
+func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, song types.Song) {
 	embed := &discordgo.MessageEmbed{
-		Title:       "Song \"" + song + "\" queued",
+		Title:       "Song \"" + song.GetName() + "\" queued",
 		Description: i.Member.User.Username + " added a song to the queue",
 		Color:       components.PURPLE,
 	}
@@ -35,20 +32,31 @@ func displaySongQueued(s *discordgo.Session, i *discordgo.InteractionCreate, son
 		s, i)
 }
 
-func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, song string) {
+func displaySongNotFound(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Song not found",
-		Description: fmt.Sprintf("No results for the term %q", song),
+		Description: fmt.Sprintf("No results for the term %q", name),
 		Color:       components.RED,
 	}
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
-func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, current string) {
-	embed := &discordgo.MessageEmbed{
-		Title:       i.Member.User.Username + " skipped this song",
-		Description: "Playing next song: " + current,
-		Color:       components.RED,
+
+func displaySongSkipped(s *discordgo.Session, i *discordgo.InteractionCreate, current types.Song) {
+	var embed *discordgo.MessageEmbed
+	if current != nil {
+		embed = &discordgo.MessageEmbed{
+			Title:       i.Member.User.Username + " skipped this song",
+			Description: "Playing next song: " + current.GetName(),
+			Color:       components.RED,
+		}
+	} else {
+		embed = &discordgo.MessageEmbed{
+			Title:       i.Member.User.Username + " skipped this song",
+			Description: "No more songs to play. You can add a song to the queue with /play",
+			Color:       components.RED,
+		}
 	}
+
 	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
 
@@ -83,12 +91,11 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
 	position := manager.player.Timestamp()
 	currentSong := manager.player.CurrentSong()
-	currentSongLength, _ := manager.player.CurrentSongLength()
-	fmt.Println("Current length: " + currentSongLength.String())
-	progressBar := generateLoadingBar(position, currentSongLength, ProgressBarLength)
+	progressBar := generateLoadingBar(position, currentSong.GetDuration(), len(currentSong.GetName()))
+
 	embed := &discordgo.MessageEmbed{
 		Title:       user + " paused this song",
-		Description: fmt.Sprintf("%s (%s) \n%s", currentSong, formatTimestamp(position), progressBar),
+		Description: fmt.Sprintf("%s (%s) \n%s", currentSong.GetName(), formatTimestamp(position), progressBar),
 		Color:       components.GREEN,
 	}
 	updateComplexReply(
@@ -97,20 +104,20 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		s, i)
 }
 
-func formatTimestamp(d time.Duration) string {
-	totalSeconds := int(d.Seconds())
-	hours := totalSeconds / 3600
-	minutes := (totalSeconds % 3600) / 60
-	seconds := totalSeconds % 60
-	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-}
-
 func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	list := ""
-	queue := manager.player.GetQueue() //TODO: move this to the parameter once implemented a custom Queue type
-	if len(queue) > 0 {
-		for j := 0; j < len(queue); j++ {
-			list += fmt.Sprintf("%d. %s\n", j+1, queue[j])
+	queue := manager.player.GetQueue()
+	if queue.Length() > 0 {
+		position := 1
+		for song := range queue.All() {
+			name := song.GetName()
+			duration := song.GetDuration()
+			//stop if they don't have name, this maybe unnecessary
+			if name == "" {
+				break
+			}
+			list += fmt.Sprintf("%d. %s (%s)\n", position, name, formatTimestamp(duration))
+			position++
 		}
 	} else {
 		list = "There are currently no songs in the queue."
@@ -166,17 +173,25 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 	}
 }
 
-func generateLoadingBar(timestamp time.Duration, songLength time.Duration, size int) string {
-	loadingBar := ""
-	conversionRatio := float64(timestamp.Milliseconds()) / float64(songLength.Milliseconds())
-	loaded := int(math.Ceil(float64(size) * conversionRatio))
+func displayJumpedToTimestamp(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	user := i.Member.User.Username
+	position := manager.player.Timestamp()
+	currentSong := manager.player.CurrentSong()
+	progressBar := generateLoadingBar(position, currentSong.GetDuration(), len(currentSong.GetName()))
 
-	for i := 0; i < size; i++ {
-		if i <= loaded {
-			loadingBar += "▓"
-		} else {
-			loadingBar += "░"
-		}
+	embed := &discordgo.MessageEmbed{
+		Title:       user + " jumped to the following",
+		Description: fmt.Sprintf("%s (%s) \n%s", currentSong.GetName(), formatTimestamp(position), progressBar),
+		Color:       components.GREEN,
 	}
-	return loadingBar
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
+}
+
+func displayInvalidArgument(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string, err error) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Invalid Argument",
+		Description: fmt.Sprintf("Argument '%s' is invalid \n Reason: '%s' ", userArg, err),
+		Color:       components.RED,
+	}
+	sendEmbed([]*discordgo.MessageEmbed{embed}, s, i)
 }
