@@ -13,7 +13,6 @@ import (
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
 	"music-bot/components"
-	_ "music-bot/components"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -89,8 +88,8 @@ func displayQuit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
-	position := manager.player.Timestamp()
-	currentSong := manager.player.CurrentSong()
+	position := getManager(i).player.Timestamp()
+	currentSong := getManager(i).player.CurrentSong()
 	progressBar := generateLoadingBar(position, currentSong.GetDuration(), len(currentSong.GetName()))
 
 	embed := &discordgo.MessageEmbed{
@@ -106,7 +105,7 @@ func displaySongPaused(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func displayQueue(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	list := ""
-	queue := manager.player.GetQueue()
+	queue := getManager(i).player.GetQueue()
 	if queue.Length() > 0 {
 		position := 1
 		for song := range queue.All() {
@@ -175,8 +174,8 @@ func displayUploadedSongs(s *discordgo.Session, i *discordgo.InteractionCreate, 
 
 func displayJumpedToTimestamp(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.Member.User.Username
-	position := manager.player.Timestamp()
-	currentSong := manager.player.CurrentSong()
+	position := getManager(i).player.Timestamp()
+	currentSong := getManager(i).player.CurrentSong()
 	progressBar := generateLoadingBar(position, currentSong.GetDuration(), len(currentSong.GetName()))
 
 	embed := &discordgo.MessageEmbed{

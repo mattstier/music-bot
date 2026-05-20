@@ -13,16 +13,24 @@ import (
 	"fmt"
 	"music-bot/audio/filePlayer"
 	"music-bot/audio/types"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-var manager *PlayerManager
+var managers sync.Map
 
 type PlayerManager struct {
 	player          types.Player
 	previousMessage *discordgo.Message
+}
+
+func getManager(i *discordgo.InteractionCreate) *PlayerManager {
+	m, _ := managers.LoadOrStore(i.GuildID, &PlayerManager{
+		player: filePlayer.InitFilePlayer(),
+	})
+	return m.(*PlayerManager)
 }
 
 func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -33,21 +41,21 @@ func ButtonEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	button := i.MessageComponentData().CustomID
 	switch button {
 	case "button_cancel":
-		manager.handleCancelEvent(s, i)
+		getManager(i).handleCancelEvent(s, i)
 	case "button_skip":
-		manager.handleSkipEvent(s, i)
+		getManager(i).handleSkipEvent(s, i)
 	case "button_pause":
-		manager.handlePauseEvent(s, i)
+		getManager(i).handlePauseEvent(s, i)
 	case "button_jump_10s_forward":
-		manager.handleJumpEvent(s, i, "10s")
+		getManager(i).handleJumpEvent(s, i, "10s")
 	case "button_jump_10s_backward":
-		manager.handleJumpEvent(s, i, "-10s")
+		getManager(i).handleJumpEvent(s, i, "-10s")
 	case "button_list_queue":
-		manager.handleListQueueEvent(s, i)
+		getManager(i).handleListQueueEvent(s, i)
 	case "expand_list":
-		handleExpandUploadedListEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+		handleExpandUploadedListEvent(s, i, getManager(i).player.(*filePlayer.FilePlayer))
 	case "collapse_list":
-		handleListUploadedEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+		handleListUploadedEvent(s, i, getManager(i).player.(*filePlayer.FilePlayer))
 	}
 }
 
@@ -76,37 +84,31 @@ func SlashEventListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		fmt.Println("Not yet implemented...")
 		fallthrough
 	case "FileUpload":
-		if manager == nil {
-			manager = &PlayerManager{filePlayer.InitFilePlayer(), nil}
-		}
 	default:
-		if manager == nil {
-			manager = &PlayerManager{filePlayer.InitFilePlayer(), nil}
-		}
 	}
-	manager.player.SetInteraction(i)
+	getManager(i).player.SetInteraction(i)
 
 	//select which event to handle
 	switch event.Name {
 	case "play":
-		manager.handlePlayEvent(s, i)
+		getManager(i).handlePlayEvent(s, i)
 	case "skip":
-		manager.handleSkipEvent(s, i)
+		getManager(i).handleSkipEvent(s, i)
 	case "pause":
-		manager.handlePauseEvent(s, i)
+		getManager(i).handlePauseEvent(s, i)
 	case "upload":
 
-		handleFileUploadEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+		handleFileUploadEvent(s, i, getManager(i).player.(*filePlayer.FilePlayer))
 	case "list":
-		manager.handleListQueueEvent(s, i)
+		getManager(i).handleListQueueEvent(s, i)
 	case "uploaded":
-		handleListUploadedEvent(s, i, manager.player.(*filePlayer.FilePlayer))
+		handleListUploadedEvent(s, i, getManager(i).player.(*filePlayer.FilePlayer))
 	case "seek":
-		manager.handleSeekEvent(s, i, event.Options[0].StringValue())
+		getManager(i).handleSeekEvent(s, i, event.Options[0].StringValue())
 	case "jump":
-		manager.handleJumpEvent(s, i, event.Options[0].StringValue())
+		getManager(i).handleJumpEvent(s, i, event.Options[0].StringValue())
 	case "quit":
-		manager.handleQuitEvent(s, i)
+		getManager(i).handleQuitEvent(s, i)
 	}
 }
 
@@ -233,13 +235,13 @@ func (manager *PlayerManager) handleListQueueEvent(s *discordgo.Session, i *disc
 }
 
 func handleExpandUploadedListEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
-	if manager.player != nil {
+	if player != nil {
 		displayUploadedSongs(s, i, player, true)
 	}
 }
 
 func handleListUploadedEvent(s *discordgo.Session, i *discordgo.InteractionCreate, player *filePlayer.FilePlayer) {
-	if manager.player != nil {
+	if player != nil {
 		//deleting previous message
 		displayUploadedSongs(s, i, player, false)
 	}
@@ -255,7 +257,7 @@ func (manager *PlayerManager) handleQuitEvent(s *discordgo.Session, i *discordgo
 func (manager *PlayerManager) handleSeekEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
 	if manager.player != nil {
 
-		timestamp, err := parseTimeStamp(userArg)
+		timestamp, err := parseTimeStamp(userArg, manager.player)
 		if err != nil {
 			displayInvalidArgument(s, i, userArg, err)
 			return
@@ -272,7 +274,7 @@ func (manager *PlayerManager) handleSeekEvent(s *discordgo.Session, i *discordgo
 
 func (manager *PlayerManager) handleJumpEvent(s *discordgo.Session, i *discordgo.InteractionCreate, userArg string) {
 	if manager.player != nil {
-		parsedTimestamp, err := parseTimeStamp(userArg)
+		parsedTimestamp, err := parseTimeStamp(userArg, manager.player)
 		if err != nil {
 			displayInvalidArgument(s, i, userArg, err)
 			return

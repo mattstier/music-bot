@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"music-bot/audio/types"
 	"strconv"
 	"strings"
 	"time"
@@ -43,10 +44,10 @@ func generateLoadingBar(timestamp time.Duration, songLength time.Duration, size 
 	return loadingBar
 }
 
-func parseTimeStamp(userArg string) (time.Duration, error) {
+func parseTimeStamp(userArg string, player types.Player) (time.Duration, error) {
 	// cleaning up timestamp for spaces
 	userArg = strings.TrimSpace(userArg)
-	currentSong := manager.player.CurrentSong()
+	currentSong := player.CurrentSong()
 
 	timestamp, err := time.ParseDuration(userArg)
 	//handle going out bounds with the songs duration or a parsing error
@@ -62,7 +63,7 @@ func parseTimeStamp(userArg string) (time.Duration, error) {
 	}
 
 	// handles negative user argument, only allowing it if it is within the songs bounds
-	if (manager.player.Timestamp()+timestamp) < 0 || timestamp > currentSong.GetDuration() {
+	if (player.Timestamp()+timestamp) < 0 || timestamp > currentSong.GetDuration() {
 		return time.Duration(0), errors.New("Invalid timestamp")
 	}
 	return timestamp, nil

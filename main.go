@@ -36,6 +36,9 @@ func main() {
 
 	session.AddHandler(commandEvents.SlashEventListener)
 	session.AddHandler(commandEvents.ButtonEventListener)
+	session.AddHandler(func(s *discordgo.Session, g *discordgo.GuildCreate) {
+		commandEvents.RegisterGuildCommands(s, g.Guild.ID)
+	})
 
 	err = session.Open()
 	defer session.Close()
@@ -44,8 +47,10 @@ func main() {
 	}
 
 	fmt.Println("Bot started")
-	//initializes all the commands
-	commandEvents.RegisterCommands(session)
+	//initializes all the commands for each guild
+	for _, guild := range session.State.Guilds {
+		commandEvents.RegisterGuildCommands(session, guild.ID)
+	}
 
 	//this is so that the bot is doing non-blocking wait for interrupts, instead of leaving
 	sc := make(chan os.Signal, 1)

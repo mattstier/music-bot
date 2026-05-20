@@ -14,8 +14,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const GUILD_ID = "771489027740139531"
-
 var PlayCommand = &discordgo.ApplicationCommand{
 	Name:        "play",
 	Description: "Finds and plays a song by name or queues it",
@@ -114,7 +112,7 @@ var UploadFileCommand = &discordgo.ApplicationCommand{
 	},
 }
 
-func RegisterCommands(session *discordgo.Session) {
+func RegisterGuildCommands(session *discordgo.Session, guildID string) {
 	commands := []*discordgo.ApplicationCommand{
 		PlayCommand,
 		PauseCommand,
@@ -127,7 +125,7 @@ func RegisterCommands(session *discordgo.Session) {
 		QuitCommand,
 	}
 	for _, command := range commands {
-		_, err := session.ApplicationCommandCreate(session.State.User.ID, GUILD_ID, command)
+		_, err := session.ApplicationCommandCreate(session.State.User.ID, guildID, command)
 		if err != nil {
 			fmt.Println("Could not initialize command", command.Name)
 		}
